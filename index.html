@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ajedrez AR</title>
     <!-- Chosen Palette: Warm Neutrals & Gold Accent -->
     <!-- Application Structure Plan: Se ha diseñado una aplicación de una sola página (SPA) con un flujo secuencial en tres pasos: 1) Pantalla de Bienvenida, 2) Pantalla de Selección de Piezas, y 3) Pantalla de Experiencia AR. Esta estructura guía al usuario de forma intuitiva, presentando primero la aplicación, permitiendo la personalización, y finalmente ofreciendo instrucciones claras antes de iniciar la cámara. Este enfoque paso a paso simplifica la experiencia, especialmente para usuarios nuevos, y asegura que entiendan cómo usar el marcador de RA antes de activar la vista principal. -->
@@ -23,6 +23,7 @@
             width: 100%;
             height: 100%;
             transition: opacity 0.5s ease-in-out;
+            z-index: 10;
         }
         .screen.active {
             display: flex;
@@ -36,7 +37,9 @@
             transform: scale(1.05);
         }
         #ar-container {
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
@@ -52,16 +55,14 @@
     <!-- Pantalla de Bienvenida -->
     <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
         <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Ajedrez en Realidad Aumentada</h1>
-        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Una nueva forma de jugar al clásico juego de estrategia. Apunta, visualiza y gana.</p>
-        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg hover:bg-amber-300 transition-transform transform hover:scale-105 shadow-lg">
-            Empezar
-        </button>
+        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Explora el mundo del ajedrez clásico y futurista en tu entorno físico.</p>
+        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar</button>
     </div>
 
     <!-- Pantalla de Selección de Piezas -->
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10">
-            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Estilo</h2>
+            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu set</h2>
             <p class="text-stone-300">Elige el set de piezas con el que quieres jugar.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
@@ -70,16 +71,14 @@
                     <span class="text-8xl">♔</span>
                 </div>
                 <h3 class="text-2xl font-semibold mb-2">Clásico</h3>
-                <p class="text-stone-400 mb-4">La elegancia y tradición del ajedrez de siempre.</p>
-                <button class="select-btn w-full bg-stone-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-400 hover:text-stone-900">Seleccionar</button>
+                <p class="text-stone-400">Set elegante y tradicional.</p>
             </div>
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic">
-                 <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
-                     <span class="text-8xl">♜</span>
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
+                    <span class="text-8xl">♜</span>
                 </div>
                 <h3 class="text-2xl font-semibold mb-2">Futurista</h3>
-                <p class="text-stone-400 mb-4">Un diseño moderno para una mente estratégica.</p>
-                 <button class="select-btn w-full bg-stone-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-400 hover:text-stone-900">Seleccionar</button>
+                <p class="text-stone-400">Diseño moderno y disruptivo.</p>
             </div>
         </div>
         <button id="continue-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>
@@ -89,8 +88,8 @@
 
     <!-- Pantalla de AR -->
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-black">
-        <div id="instructions" class="text-center p-8 z-10 bg-black bg-opacity-80 rounded-lg">
-            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara la Magia</h2>
+        <div id="instructions" class="text-center p-8 z-20 bg-black bg-opacity-80 rounded-lg">
+            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara tu cámara y el marcador</h2>
             <p class="mb-6 max-w-lg text-stone-200">Apunta la cámara de tu dispositivo al marcador para que aparezca el tablero. <br>Puedes descargar el marcador aquí:</p>
             <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block bg-amber-400 text-stone-900 font-bold py-2 px-6 rounded-full hover:bg-amber-300 transition-transform transform hover:scale-105">
                 Descargar Marcador
@@ -102,11 +101,14 @@
                 Volver
             </button>
         </div>
-        <div id="ar-container">
-        </div>
+        <div id="ar-container"></div>
+    </div>
+    
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 text-amber-200 flex items-center justify-center" style="display: none; z-index: 50;">
+        <span class="text-2xl font-bold animate-pulse">Cargando escena AR...</span>
     </div>
 
-
+    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const screens = {
@@ -114,36 +116,41 @@
                 selection: document.getElementById('selection-screen'),
                 ar: document.getElementById('ar-screen'),
             };
-
             const buttons = {
                 start: document.getElementById('start-btn'),
                 continue: document.getElementById('continue-btn'),
                 back: document.getElementById('back-btn'),
-                selectionCards: document.querySelectorAll('.selection-card'),
             };
-            
+            const selectionCards = document.querySelectorAll('.selection-card');
             const arContainer = document.getElementById('ar-container');
             const instructions = document.getElementById('instructions');
+            const loadingOverlay = document.getElementById('loading-overlay');
             let selectedSet = null;
+            let sceneEl = null;
 
             function navigateTo(screenName) {
-                Object.values(screens).forEach(screen => screen.classList.remove('active'));
-                if(screens[screenName]) {
-                    screens[screenName].classList.add('active');
+                Object.values(screens).forEach(s => s.classList.remove('active'));
+                if (screens[screenName]) screens[screenName].classList.add('active');
+                
+                if (screenName !== 'ar') {
+                    if (sceneEl) {
+                        sceneEl.pause();
+                    }
+                    arContainer.innerHTML = '';
+                    sceneEl = null;
+                    instructions.style.display = 'block';
                 }
             }
 
             buttons.start.addEventListener('click', () => navigateTo('selection'));
             
             buttons.back.addEventListener('click', () => {
-                arContainer.innerHTML = ''; 
-                instructions.style.display = 'block';
                 navigateTo('selection');
             });
 
-            buttons.selectionCards.forEach(card => {
+            selectionCards.forEach(card => {
                 card.addEventListener('click', () => {
-                    buttons.selectionCards.forEach(c => c.classList.remove('selected'));
+                    selectionCards.forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedSet = card.dataset.set;
                     buttons.continue.disabled = false;
@@ -153,22 +160,30 @@
             buttons.continue.addEventListener('click', () => {
                 if (selectedSet) {
                     navigateTo('ar');
+                    showLoading(true);
                     setTimeout(() => {
                         instructions.style.display = 'none';
                         setupARScene(selectedSet);
-                    }, 4000); 
+                        showLoading(false);
+                    }, 1500); // Simula un tiempo de carga
                 }
             });
             
+            function showLoading(on) {
+                loadingOverlay.style.display = on ? 'flex' : 'none';
+            }
+
             function setupARScene(pieceSet) {
-                arContainer.innerHTML = '';
-                
-                const sceneEl = document.createElement('a-scene');
+                arContainer.innerHTML = ''; // Limpieza final por si acaso
+
+                sceneEl = document.createElement('a-scene');
                 sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;');
                 sceneEl.setAttribute('color-space', 'sRGB');
                 sceneEl.setAttribute('renderer', 'colorManagement: true, physicallyCorrectLights');
                 sceneEl.setAttribute('vr-mode-ui', 'enabled: false');
                 sceneEl.setAttribute('device-orientation-permission-ui', 'enabled: false');
+                sceneEl.setAttribute('embedded','');
+
 
                 const cameraEl = document.createElement('a-camera');
                 cameraEl.setAttribute('position', '0 0 0');
@@ -178,20 +193,61 @@
                 const targetEntity = document.createElement('a-entity');
                 targetEntity.setAttribute('mindar-image-target', 'targetIndex: 0');
                 
-                const pieces = createChessPieces(pieceSet);
-                pieces.forEach(piece => targetEntity.appendChild(piece));
+                createChessBoard(targetEntity, pieceSet);
 
                 sceneEl.appendChild(targetEntity);
                 arContainer.appendChild(sceneEl);
             }
 
-            function createChessPieces(pieceSet) {
-                const pieces = [];
+            function createChessBoard(entity, pieceSet) {
+                const game = new Chess();
+                const fen = game.fen();
+                renderBoardFromFen(entity, fen, pieceSet);
+            }
+
+            function renderBoardFromFen(entity, fen, pieceSet) {
+                entity.innerHTML = ''; // Limpia piezas anteriores
                 const boardSize = 1.4;
                 const squareSize = boardSize / 8;
                 const offset = -boardSize / 2 + squareSize / 2;
+                
+                const fenParts = fen.split(' ')[0].split('/');
 
-                const pieceStyles = {
+                for (let row = 0; row < 8; row++) {
+                    let col = 0;
+                    for (const symbol of fenParts[row]) {
+                        if (!isNaN(symbol)) {
+                            col += parseInt(symbol);
+                            continue;
+                        }
+                        
+                        const { type, color } = pieceFromFen(symbol);
+                        const pieceEl = document.createElement('a-entity');
+                        const primitive = getPrimitive(type, color, pieceSet);
+
+                        pieceEl.setAttribute('geometry', primitive.geometry);
+                        pieceEl.setAttribute('material', primitive.material);
+                        
+                        const x = offset + col * squareSize;
+                        const z = offset + row * squareSize;
+                        pieceEl.setAttribute('position', `${x} 0 ${z}`);
+
+                        entity.appendChild(pieceEl);
+                        col++;
+                    }
+                }
+            }
+
+            function pieceFromFen(fenSymbol) {
+                const fenToType = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
+                const type = fenToType[fenSymbol.toLowerCase()];
+                const color = fenSymbol === fenSymbol.toLowerCase() ? 'b' : 'w';
+                return { type, color };
+            }
+
+            function getPrimitive(type, color, set) {
+                const key = type + (color === 'b' ? '_b' : '');
+                const styles = {
                     classic: {
                         pawn: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
                         rook: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
@@ -199,7 +255,6 @@
                         bishop: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #E5E7EB' },
                         queen: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #FBBF24' },
                         king: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #FDE68A' },
-                        
                         pawn_b: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #4B5563' },
                         rook_b: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #4B5563' },
                         knight_b: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #4B5563' },
@@ -214,7 +269,6 @@
                         bishop: { geometry: 'primitive: tetrahedron; radius: 0.1', material: 'color: #C084FC; metalness: 0.8; roughness: 0.2' },
                         queen: { geometry: 'primitive: cone; height: 0.2; radiusBottom: 0.08', material: 'color: #34D399; metalness: 0.8; roughness: 0.2' },
                         king: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #FBBF24; metalness: 0.8; roughness: 0.2' },
-                        
                         pawn_b: { geometry: 'primitive: octahedron; radius: 0.06', material: 'color: #0E7490; metalness: 0.8; roughness: 0.2' },
                         rook_b: { geometry: 'primitive: box; width: 0.12; height: 0.12; depth: 0.12', material: 'color: #6D28D9; metalness: 0.8; roughness: 0.2' },
                         knight_b: { geometry: 'primitive: torus-knot; radius: 0.05; radiusTubular: 0.015; p:2; q:3', material: 'color: #BE185D; metalness: 0.8; roughness: 0.2' },
@@ -223,42 +277,12 @@
                         king_b: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #B45309; metalness: 0.8; roughness: 0.2' },
                     }
                 };
-                
-                const style = pieceStyles[pieceSet];
-                
-                const boardSetup = [
-                    ['rook_b', 'knight_b', 'bishop_b', 'queen_b', 'king_b', 'bishop_b', 'knight_b', 'rook_b'],
-                    ['pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b'],
-                    [], [], [], [],
-                    ['pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn'],
-                    ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'],
-                ];
-                
-                for (let row = 0; row < boardSetup.length; row++) {
-                    const rowPieces = boardSetup[row];
-                    for (let col = 0; col < rowPieces.length; col++) {
-                         const pieceType = rowPieces[col];
-                         if (pieceType) {
-                            const pieceEl = document.createElement('a-entity');
-                            const x = offset + col * squareSize;
-                            let z;
-                            if (row <= 1) z = offset + row * squareSize;
-                            else z = offset + (row + 4) * squareSize;
-
-                            pieceEl.setAttribute('position', `${x} 0 ${z}`);
-                            pieceEl.setAttribute('geometry', style[pieceType].geometry);
-                            pieceEl.setAttribute('material', style[pieceType].material);
-                            pieces.push(pieceEl);
-                         }
-                    }
-                }
-                return pieces;
+                return styles[set][key];
             }
         });
     </script>
 </body>
 </html>
-
 
 
 
