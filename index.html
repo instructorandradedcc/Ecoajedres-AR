@@ -4,10 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ajedrez AR</title>
-    <!-- Chosen Palette: Warm Neutrals & Gold Accent -->
-    <!-- Application Structure Plan: Se ha diseñado una aplicación de una sola página (SPA) con un flujo secuencial en tres pasos: 1) Pantalla de Bienvenida, 2) Pantalla de Selección de Piezas, y 3) Pantalla de Experiencia AR. Esta estructura guía al usuario de forma intuitiva, presentando primero la aplicación, permitiendo la personalización, y finalmente ofreciendo instrucciones claras antes de iniciar la cámara. Este enfoque paso a paso simplifica la experiencia, especialmente para usuarios nuevos, y asegura que entiendan cómo usar el marcador de RA antes de activar la vista principal. -->
-    <!-- Visualization & Content Choices: La idea de una app de Ajedrez AR se traduce en una experiencia web interactiva. Objetivo: Crear un prototipo funcional. Presentación: Se usan tarjetas interactivas para la selección de piezas (un método visualmente atractivo y claro) y una escena de A-Frame gestionada por mind-ar-js para la RA. Interacción: La navegación se controla por botones que revelan u ocultan secciones de la página. La escena 3D se genera dinámicamente en JS según la elección del usuario, usando primitivas de A-Frame como placeholders para los modelos 3D finales. Justificación: Esta arquitectura es robusta, escalable y se centra en la usabilidad. Librerías: Tailwind CSS para la UI, A-Frame para la escena 3D y mind-ar-js para el tracking de imágenes AR. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -28,11 +24,11 @@
         .screen.active {
             display: flex;
         }
-        .selection-card {
+        .selection-card, .board-card, .color-swatch {
             transition: all 0.3s ease;
             border: 4px solid transparent;
         }
-        .selection-card.selected {
+        .selection-card.selected, .board-card.selected, .color-swatch.selected {
             border-color: #FBBF24; /* amber-400 */
             transform: scale(1.05);
         }
@@ -48,9 +44,18 @@
             width: 100%;
             height: 100%;
         }
+        .version {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            z-index: 100;
+        }
     </style>
 </head>
 <body class="bg-stone-900 text-white overflow-hidden">
+    <div id="app-version" class="version"></div>
 
     <!-- Pantalla de Bienvenida -->
     <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
@@ -59,7 +64,7 @@
         <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar</button>
     </div>
 
-    <!-- Pantalla de Selección de Piezas -->
+    <!-- Pantalla de Selección de Set de Piezas -->
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10">
             <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu set</h2>
@@ -67,40 +72,59 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="classic">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
-                    <span class="text-8xl">♔</span>
-                </div>
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♔</span></div>
                 <h3 class="text-2xl font-semibold mb-2">Clásico</h3>
                 <p class="text-stone-400">Set elegante y tradicional.</p>
             </div>
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
-                    <span class="text-8xl">♜</span>
-                </div>
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♜</span></div>
                 <h3 class="text-2xl font-semibold mb-2">Futurista</h3>
                 <p class="text-stone-400">Diseño moderno y disruptivo.</p>
             </div>
         </div>
-        <button id="continue-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>
-            Continuar
-        </button>
+        <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
     </div>
+
+    <!-- Pantalla de Selección de Tablero y Colores -->
+    <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
+        <div class="text-center mb-10">
+             <h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu partida</h2>
+             <p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p>
+        </div>
+        <div class="max-w-4xl w-full">
+            <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-wood">
+                    <img src="https://placehold.co/400x300/854d0e/fefce8?text=Madera+Clásica" alt="Tablero de Madera" class="w-full h-40 object-cover rounded-md mb-3">
+                    <p class="font-semibold">Madera Clásica</p>
+                </div>
+                 <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-marble">
+                    <img src="https://placehold.co/400x300/d1d5db/1f2937?text=Mármol+Elegante" alt="Tablero de Mármol" class="w-full h-40 object-cover rounded-md mb-3">
+                    <p class="font-semibold">Mármol Elegante</p>
+                </div>
+            </div>
+             <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige el color de tus piezas</h3>
+            <div class="flex justify-center gap-6">
+                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-white" data-color="white"></div>
+                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-gray-800" data-color="black"></div>
+            </div>
+        </div>
+        <button id="continue-board-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Iniciar Partida</button>
+         <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors">Volver</button>
+    </div>
+
 
     <!-- Pantalla de AR -->
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-black">
         <div id="instructions" class="text-center p-8 z-20 bg-black bg-opacity-80 rounded-lg">
             <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara tu cámara y el marcador</h2>
             <p class="mb-6 max-w-lg text-stone-200">Apunta la cámara de tu dispositivo al marcador para que aparezca el tablero. <br>Puedes descargar el marcador aquí:</p>
-            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block bg-amber-400 text-stone-900 font-bold py-2 px-6 rounded-full hover:bg-amber-300 transition-transform transform hover:scale-105">
-                Descargar Marcador
-            </a>
+            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block bg-amber-400 text-stone-900 font-bold py-2 px-6 rounded-full hover:bg-amber-300 transition-transform transform hover:scale-105">Descargar Marcador</a>
             <div class="my-6">
                 <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" alt="Marcador de Ajedrez" class="w-48 h-auto mx-auto border-4 border-white rounded-lg">
             </div>
-            <button id="back-btn" class="bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors">
-                Volver
-            </button>
         </div>
+        <button id="back-to-board-btn" class="absolute top-5 left-5 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors z-30" style="display: none;">Volver</button>
         <div id="ar-container"></div>
     </div>
     
@@ -111,22 +135,54 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const APP_VERSION = "1.1.0"; // Versión actual de la app
+            
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
                 selection: document.getElementById('selection-screen'),
+                boardSelection: document.getElementById('board-selection-screen'),
                 ar: document.getElementById('ar-screen'),
             };
+
             const buttons = {
                 start: document.getElementById('start-btn'),
-                continue: document.getElementById('continue-btn'),
-                back: document.getElementById('back-btn'),
+                continueSet: document.getElementById('continue-set-btn'),
+                continueBoard: document.getElementById('continue-board-btn'),
+                backToSet: document.getElementById('back-to-set-btn'),
+                backToBoard: document.getElementById('back-to-board-btn'),
             };
+
             const selectionCards = document.querySelectorAll('.selection-card');
+            const boardCards = document.querySelectorAll('.board-card');
+            const colorSwatches = document.querySelectorAll('.color-swatch');
+
             const arContainer = document.getElementById('ar-container');
             const instructions = document.getElementById('instructions');
             const loadingOverlay = document.getElementById('loading-overlay');
+            const versionDisplay = document.getElementById('app-version');
+            
             let selectedSet = null;
+            let selectedBoard = null;
+            let selectedColor = null;
             let sceneEl = null;
+
+            versionDisplay.textContent = `v${APP_VERSION}`;
+
+            // Simulación de comprobación de versión
+            function checkVersion() {
+                // En un caso real, esto haría una llamada a un servidor
+                const latestVersion = "1.1.0"; // Simula la última versión disponible
+                if (APP_VERSION < latestVersion) {
+                    console.log("Nueva versión disponible. Actualizando...");
+                    window.location.reload(true);
+                } else {
+                    console.log("La aplicación está actualizada.");
+                }
+            }
+            // Comprueba la versión al cargar y luego cada 5 minutos
+            checkVersion();
+            setInterval(checkVersion, 300000);
+
 
             function navigateTo(screenName) {
                 Object.values(screens).forEach(s => s.classList.remove('active'));
@@ -135,37 +191,66 @@
                 if (screenName !== 'ar') {
                     if (sceneEl) {
                         sceneEl.pause();
+                        sceneEl.renderer.dispose();
                     }
                     arContainer.innerHTML = '';
                     sceneEl = null;
                     instructions.style.display = 'block';
+                    buttons.backToBoard.style.display = 'none';
                 }
             }
 
             buttons.start.addEventListener('click', () => navigateTo('selection'));
-            
-            buttons.back.addEventListener('click', () => {
-                navigateTo('selection');
-            });
+            buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
+            buttons.backToBoard.addEventListener('click', () => navigateTo('boardSelection'));
 
             selectionCards.forEach(card => {
                 card.addEventListener('click', () => {
                     selectionCards.forEach(c => c.classList.remove('selected'));
                     card.classList.add('selected');
                     selectedSet = card.dataset.set;
-                    buttons.continue.disabled = false;
+                    buttons.continueSet.disabled = false;
+                });
+            });
+            
+            buttons.continueSet.addEventListener('click', () => {
+                if (selectedSet) {
+                    navigateTo('boardSelection');
+                }
+            });
+
+            boardCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    boardCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedBoard = card.dataset.board;
+                    validateBoardSelection();
                 });
             });
 
-            buttons.continue.addEventListener('click', () => {
-                if (selectedSet) {
+            colorSwatches.forEach(swatch => {
+                swatch.addEventListener('click', () => {
+                    colorSwatches.forEach(s => s.classList.remove('selected'));
+                    swatch.classList.add('selected');
+                    selectedColor = swatch.dataset.color;
+                    validateBoardSelection();
+                });
+            });
+
+            function validateBoardSelection() {
+                buttons.continueBoard.disabled = !(selectedBoard && selectedColor);
+            }
+
+            buttons.continueBoard.addEventListener('click', () => {
+                if (selectedBoard && selectedColor) {
                     navigateTo('ar');
                     showLoading(true);
                     setTimeout(() => {
                         instructions.style.display = 'none';
-                        setupARScene(selectedSet);
+                        buttons.backToBoard.style.display = 'block';
+                        setupARScene(selectedSet, selectedBoard);
                         showLoading(false);
-                    }, 1500); // Simula un tiempo de carga
+                    }, 1500);
                 }
             });
             
@@ -173,8 +258,8 @@
                 loadingOverlay.style.display = on ? 'flex' : 'none';
             }
 
-            function setupARScene(pieceSet) {
-                arContainer.innerHTML = ''; // Limpieza final por si acaso
+            function setupARScene(pieceSet, boardStyle) {
+                arContainer.innerHTML = '';
 
                 sceneEl = document.createElement('a-scene');
                 sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;');
@@ -184,7 +269,6 @@
                 sceneEl.setAttribute('device-orientation-permission-ui', 'enabled: false');
                 sceneEl.setAttribute('embedded','');
 
-
                 const cameraEl = document.createElement('a-camera');
                 cameraEl.setAttribute('position', '0 0 0');
                 cameraEl.setAttribute('look-controls', 'enabled: false');
@@ -193,20 +277,31 @@
                 const targetEntity = document.createElement('a-entity');
                 targetEntity.setAttribute('mindar-image-target', 'targetIndex: 0');
                 
-                createChessBoard(targetEntity, pieceSet);
+                // Añadir el tablero como un plano
+                const boardEl = document.createElement('a-plane');
+                const boardSize = 1.4;
+                boardEl.setAttribute('width', boardSize);
+                boardEl.setAttribute('height', boardSize);
+                boardEl.setAttribute('rotation', '-90 0 0');
+                const boardTextures = {
+                    'classic-wood': 'https://placehold.co/512x512/854d0e/fefce8?text=+',
+                    'classic-marble': 'https://placehold.co/512x512/d1d5db/1f2937?text=+'
+                };
+                boardEl.setAttribute('material', `src: ${boardTextures[boardStyle]};`);
+                targetEntity.appendChild(boardEl);
+
+                createChessPieces(targetEntity, pieceSet);
 
                 sceneEl.appendChild(targetEntity);
                 arContainer.appendChild(sceneEl);
             }
 
-            function createChessBoard(entity, pieceSet) {
+            function createChessPieces(entity, pieceSet) {
                 const game = new Chess();
-                const fen = game.fen();
-                renderBoardFromFen(entity, fen, pieceSet);
+                renderBoardFromFen(entity, game.fen(), pieceSet);
             }
 
             function renderBoardFromFen(entity, fen, pieceSet) {
-                entity.innerHTML = ''; // Limpia piezas anteriores
                 const boardSize = 1.4;
                 const squareSize = boardSize / 8;
                 const offset = -boardSize / 2 + squareSize / 2;
@@ -247,8 +342,9 @@
 
             function getPrimitive(type, color, set) {
                 const key = type + (color === 'b' ? '_b' : '');
+                // Aquí se usarían modelos 3D en un futuro. Por ahora, se mantienen las primitivas.
                 const styles = {
-                    classic: {
+                     classic: {
                         pawn: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
                         rook: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
                         knight: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #E5E7EB' },
@@ -283,7 +379,6 @@
     </script>
 </body>
 </html>
-
 
 
 
