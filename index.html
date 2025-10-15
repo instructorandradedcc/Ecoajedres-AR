@@ -3,547 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Capacitación Interactiva: Sistemas de Extinción de Incendios</title>
+    <title>Ajedrez AR</title>
+    <!-- Chosen Palette: Warm Neutrals & Gold Accent -->
+    <!-- Application Structure Plan: Se ha diseñado una aplicación de una sola página (SPA) con un flujo secuencial en tres pasos: 1) Pantalla de Bienvenida, 2) Pantalla de Selección de Piezas, y 3) Pantalla de Experiencia AR. Esta estructura guía al usuario de forma intuitiva, presentando primero la aplicación, permitiendo la personalización, y finalmente ofreciendo instrucciones claras antes de iniciar la cámara. Este enfoque paso a paso simplifica la experiencia, especialmente para usuarios nuevos, y asegura que entiendan cómo usar el marcador de RA antes de activar la vista principal. -->
+    <!-- Visualization & Content Choices: La idea de una app de Ajedrez AR se traduce en una experiencia web interactiva. Objetivo: Crear un prototipo funcional. Presentación: Se usan tarjetas interactivas para la selección de piezas (un método visualmente atractivo y claro) y una escena de A-Frame gestionada por mind-ar-js para la RA. Interacción: La navegación se controla por botones que revelan u ocultan secciones de la página. La escena 3D se genera dinámicamente en JS según la elección del usuario, usando primitivas de A-Frame como placeholders para los modelos 3D finales. Justificación: Esta arquitectura es robusta, escalable y se centra en la usabilidad. Librerías: Tailwind CSS para la UI, A-Frame para la escena 3D y mind-ar-js para el tracking de imágenes AR. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; background-color: #f8f7f6; color: #3f3f46; }
-        .nav-link { transition: color 0.3s, border-bottom-color 0.3s; border-bottom: 2px solid transparent; cursor: pointer; }
-        .nav-link.active, .nav-link:hover { color: #d97706; border-bottom-color: #d97706; }
-        .card { background-color: #ffffff; border: 1px solid #e7e5e4; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05); transition: transform 0.3s, box-shadow 0.3s; overflow: hidden; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07); }
-        .btn-selector { transition: all 0.3s; }
-        .btn-selector.active { background-color: #fb923c !important; color: #ffffff !important; box-shadow: 0 4px 14px 0 rgb(0 0 0 / 0.1); }
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .tetrahedron-visual { position: relative; height: 280px; margin: 2rem auto; }
-        .tetra-dot { position: absolute; width: 80px; text-align: center; cursor: pointer; transition: transform 0.3s ease; }
-        .tetra-dot:hover { transform: scale(1.1); }
-        .tetra-dot .icon { font-size: 2.5rem; }
-        .tetra-dot .label { font-weight: 600; margin-top: 4px; }
-        .dot-top { top: 0; left: 50%; transform: translateX(-50%); }
-        .dot-left { bottom: 0; left: 20px; }
-        .dot-right { bottom: 0; right: 20px; }
-        .dot-center { top: 55%; left: 50%; transform: translate(-50%, -50%); opacity: 0.7; }
-
-        .faq-item { border-bottom: 1px solid #e7e5e4; }
-        .faq-question { cursor: pointer; }
-        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
-        
-        .animated-card { cursor: pointer; }
-        .animated-card:hover { box-shadow: 0 0 15px rgba(249, 115, 22, 0.4); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); } 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); } }
-
-        .video-thumbnail { position: relative; cursor: pointer; }
-        .video-thumbnail::after { content: '▶'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; color: white; text-shadow: 0 0 15px rgba(0,0,0,0.7); transition: transform 0.3s; }
-        .video-thumbnail:hover::after { transform: translate(-50%, -50%) scale(1.2); }
-        
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal-content { position: relative; width: 90%; max-width: 900px; }
-        .modal-close { position: absolute; top: -40px; right: 0; font-size: 2.5rem; color: white; cursor: pointer; font-weight: 200; }
-        
-        #drawing-canvas { border: 2px solid #e7e5e4; border-radius: 0.5rem; cursor: crosshair; }
-        #canvas-controls button, #canvas-controls input { transition: background-color 0.2s; }
-        #canvas-controls button:hover { background-color: #f5f5f4; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .screen.active {
+            display: flex;
+        }
+        .selection-card {
+            transition: all 0.3s ease;
+            border: 4px solid transparent;
+        }
+        .selection-card.selected {
+            border-color: #FBBF24; /* amber-400 */
+            transform: scale(1.05);
+        }
+        #ar-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        a-scene {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
-<body class="antialiased">
+<body class="bg-stone-900 text-white overflow-hidden">
 
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-stone-200">
-        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-xl md:text-2xl font-bold text-amber-700">Capacitación Interactiva</h1>
-            <div id="main-nav" class="hidden lg:flex items-center space-x-5">
-                <a data-page="inicio" class="nav-link text-stone-600 pb-1">Inicio</a>
-                <a data-page="fisicoquimica" class="nav-link text-stone-600 pb-1">Fundamentos del Fuego</a>
-                <a data-page="clasificacion" class="nav-link text-stone-600 pb-1">Clasificación</a>
-                <a data-page="deteccion" class="nav-link text-stone-600 pb-1">Detección</a>
-                <a data-page="sistemas" class="nav-link text-stone-600 pb-1">Sistemas</a>
-                <a data-page="preguntas" class="nav-link text-stone-600 pb-1">Preguntas</a>
-                <a data-page="recursos" class="nav-link text-stone-600 pb-1">Recursos</a>
-                <a data-page="examen" class="nav-link text-stone-600 pb-1">Examen</a>
-            </div>
-            <button id="mobile-menu-button" class="lg:hidden p-2 rounded-md"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg></button>
-        </nav>
-        <div id="mobile-menu" class="hidden lg:hidden px-6 pb-4 flex flex-col space-y-2">
-            <a data-page="inicio" class="nav-link text-stone-600 pb-1">Inicio</a>
-            <a data-page="fisicoquimica" class="nav-link text-stone-600 pb-1">Fundamentos del Fuego</a>
-            <a data-page="clasificacion" class="nav-link text-stone-600 pb-1">Clasificación</a>
-            <a data-page="deteccion" class="nav-link text-stone-600 pb-1">Detección</a>
-            <a data-page="sistemas" class="nav-link text-stone-600 pb-1">Sistemas</a>
-            <a data-page="preguntas" class="nav-link text-stone-600 pb-1">Preguntas</a>
-            <a data-page="recursos" class="nav-link text-stone-600 pb-1">Recursos</a>
-            <a data-page="examen" class="nav-link text-stone-600 pb-1">Examen</a>
+    <!-- Pantalla de Bienvenida -->
+    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
+        <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Ajedrez en Realidad Aumentada</h1>
+        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Una nueva forma de jugar al clásico juego de estrategia. Apunta, visualiza y gana.</p>
+        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg hover:bg-amber-300 transition-transform transform hover:scale-105 shadow-lg">
+            Empezar
+        </button>
+    </div>
+
+    <!-- Pantalla de Selección de Piezas -->
+    <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
+        <div class="text-center mb-10">
+            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Estilo</h2>
+            <p class="text-stone-300">Elige el set de piezas con el que quieres jugar.</p>
         </div>
-    </header>
-
-    <main class="container mx-auto p-4 md:p-8">
-        
-        <section id="inicio" class="page">
-            <div class="text-center py-16">
-                <h1 class="text-4xl md:text-5xl font-extrabold text-stone-800">Bienvenido a la Capacitación Interactiva</h1>
-                <p class="mt-4 text-lg text-stone-600 max-w-2xl mx-auto">Sistemas Fijos de Extinción de Incendios</p>
-                <p class="mt-6 max-w-3xl mx-auto text-stone-600">Este módulo interactivo está diseñado para guiarte a través de los conceptos fundamentales, los diferentes tipos de sistemas y sus aplicaciones prácticas. Utiliza la navegación para explorar cada sección a tu propio ritmo.</p>
-                <button data-page="fisicoquimica" class="nav-link-button mt-10 bg-amber-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-amber-700 transition-transform transform hover:scale-105 shadow-lg">Comenzar Capacitación</button>
-            </div>
-        </section>
-
-        <section id="fisicoquimica" class="page">
-            <h2 class="text-3xl font-bold text-center text-stone-800">Fisicoquímica del Fuego</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-stone-600">Antes de extinguir un fuego, es crucial entender su naturaleza. Aquí exploramos qué es el fuego, sus peligros asociados y cómo se propaga a través de diferentes medios.</p>
-            <div class="mt-12 grid md:grid-cols-2 gap-8">
-                <div class="card p-6"><h3 class="text-xl font-bold text-amber-700 mb-4">Conceptos Básicos</h3><img src="imagenes/clasificacion-del-fuego-general.JPG" class="w-full h-40 object-cover rounded-md mb-4" alt="Conceptos de Fuego"><div class="mt-4 space-y-4"><div><h4 class="font-semibold text-stone-800">Fuego</h4><p class="text-stone-600 text-sm">Es una reacción química de oxidación rápida que libera energía en forma de luz y calor. Va acompañada de llamas, humo y gases.</p></div><div><h4 class="font-semibold text-stone-800">Conato de Incendio</h4><p class="text-stone-600 text-sm">Es la etapa inicial de un incendio. Puede ser controlado de forma rápida por personal con conocimientos básicos utilizando un extintor.</p></div></div></div>
-                <div class="card p-6"><h3 class="text-xl font-bold text-amber-700 mb-4">Peligros para las Personas</h3><img src="imagenes/generacion-gases-toxicos.JPG" class="w-full h-40 object-cover rounded-md mb-4" alt="Peligros del Fuego"><div class="mt-4 space-y-4"><div><h4 class="font-semibold text-stone-800">Gases Tóxicos</h4><p class="text-stone-600 text-sm">Es la principal causa de muerte en incendios. Gases como el monóxido de carbono (CO) desplazan el oxígeno, causando asfixia.</p></div><div><h4 class="font-semibold text-stone-800">Humo y Gases Calientes</h4><p class="text-stone-600 text-sm">La inhalación provoca quemaduras internas. El humo denso reduce drásticamente la visibilidad, dificultando la evacuación.</p></div></div></div>
-            </div>
-            <div class="mt-12"><h3 class="text-2xl font-bold text-center text-stone-800">Propagación del Fuego: Transferencia de Calor</h3><p class="mt-2 max-w-3xl mx-auto text-center text-stone-600">El fuego se expande transfiriendo calor de tres maneras principales.</p><div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="card p-6 text-center flex flex-col"><div class="flex-grow"><h4 class="text-lg font-bold text-amber-800">Conducción</h4><p class="text-stone-600 text-sm mt-2">El calor se transfiere por contacto directo. Los metales son excelentes conductores y pueden propagar el fuego a través de estructuras.</p></div><img src="imagenes/propagacion-conduccion.JPG" class="w-full h-48 object-cover rounded-md mt-4" alt="Conducción"></div>
-                <div class="card p-6 text-center flex flex-col"><div class="flex-grow"><h4 class="text-lg font-bold text-amber-800">Convección</h4><p class="text-stone-600 text-sm mt-2">Transferencia de calor por el movimiento de gases. El aire caliente y el humo ascienden, propagando el fuego a pisos superiores.</p></div><img src="imagenes/propagacion-conveccion.JPG" class="w-full h-48 object-cover rounded-md mt-4" alt="Convección"></div>
-                <div class="card p-6 text-center flex flex-col"><div class="flex-grow"><h4 class="text-lg font-bold text-amber-800">Radiación</h4><p class="text-stone-600 text-sm mt-2">El calor se transfiere a través de ondas. No necesita contacto y puede incendiar objetos a distancia.</p></div><img src="imagenes/propagacion-radiaccion.JPG" class="w-full h-48 object-cover rounded-md mt-4" alt="Radiación"></div>
-            </div></div>
-        </section>
-
-        <section id="clasificacion" class="page">
-            <h2 class="text-3xl font-bold text-center text-stone-800">Tetraedro y Clasificación del Fuego</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-stone-600">Aquí visualizamos los 4 componentes esenciales del fuego y detallamos su clasificación según el tipo de combustible involucrado.</p>
-            <div class="mt-12 grid md:grid-cols-2 gap-8 items-center">
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold text-center text-amber-700">El Tetraedro del Fuego</h3>
-                    <div id="tetrahedron-container" class="tetrahedron-visual">
-                        <div id="tetra-info-box" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center p-4 rounded-lg w-48 h-24 flex items-center justify-center transition-opacity duration-300 bg-stone-100/50"><span class="font-semibold text-stone-700">Pasa el cursor sobre un elemento.</span></div>
-                        <div class="tetra-dot dot-top" data-info="<strong>Calor:</strong> Energía de activación.">
-                            <div class="icon">🔥</div><div class="label">Calor</div>
-                        </div>
-                        <div class="tetra-dot dot-left" data-info="<strong>Combustible:</strong> Material que se oxida.">
-                            <div class="icon">🪵</div><div class="label">Combustible</div>
-                        </div>
-                        <div class="tetra-dot dot-right" data-info="<strong>Oxígeno:</strong> Agente comburente.">
-                            <div class="icon">🌬️</div><div class="label">Oxígeno</div>
-                        </div>
-                        <div class="tetra-dot dot-center" data-info="<strong>Reacción en Cadena:</strong> Proceso autosostenido.">
-                            <div class="icon">⚛️</div><div class="label">Reacción en Cadena</div>
-                        </div>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="classic">
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
+                    <span class="text-8xl">♔</span>
                 </div>
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold text-center text-amber-700">Clasificación de Fuegos</h3>
-                    <p class="text-center text-sm text-stone-500 mt-2">Selecciona una clase para ver los detalles. ¡Haz clic en la imagen para dibujar!</p>
-                    <div id="fire-classes-selector" class="flex flex-wrap justify-center gap-2 mt-6"><button class="btn-selector active w-16 h-16 rounded-full font-bold text-2xl" data-class="A">A</button><button class="btn-selector w-16 h-16 rounded-full font-bold text-2xl" data-class="B">B</button><button class="btn-selector w-16 h-16 rounded-full font-bold text-2xl" data-class="C">C</button><button class="btn-selector w-16 h-16 rounded-full font-bold text-2xl" data-class="D">D</button><button class="btn-selector w-16 h-16 rounded-full font-bold text-2xl" data-class="K">K</button></div>
-                    <div id="fire-class-info" class="mt-6 p-4 bg-stone-50 rounded-lg min-h-[150px]"></div>
+                <h3 class="text-2xl font-semibold mb-2">Clásico</h3>
+                <p class="text-stone-400 mb-4">La elegancia y tradición del ajedrez de siempre.</p>
+                <button class="select-btn w-full bg-stone-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-400 hover:text-stone-900">Seleccionar</button>
+            </div>
+            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic">
+                 <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center">
+                     <span class="text-8xl">♜</span>
                 </div>
+                <h3 class="text-2xl font-semibold mb-2">Futurista</h3>
+                <p class="text-stone-400 mb-4">Un diseño moderno para una mente estratégica.</p>
+                 <button class="select-btn w-full bg-stone-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-amber-400 hover:text-stone-900">Seleccionar</button>
             </div>
-        </section>
+        </div>
+        <button id="continue-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>
+            Continuar
+        </button>
+    </div>
 
-        <section id="deteccion" class="page">
-            <h2 class="text-3xl font-bold text-center text-stone-800">Detección y Alarma: La Primera Línea de Defensa</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-stone-600">Los sistemas de detección son los "sentidos" que vigilan para identificar un incendio en su fase inicial. Haz clic en una tarjeta para ver sus detalles, o en su imagen para una explicación interactiva.</p>
-            <div id="detector-cards-container" class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="card animated-card p-6 text-center flex flex-col" data-detector-card="humo"><img data-drawable="true" src="https://raw.githubusercontent.com/instructorandradecc/Sistemas-Fijos-de-Extinci-n-de-Incendios/main/imagenes/sistema-de-detecion.JPG" class="w-full h-32 object-cover rounded-md" alt="Detector de Humo"><h3 class="text-lg font-bold mt-4">Detectores de Humo</h3><p class="text-sm mt-2 flex-grow">Ideales para fuegos de combustión lenta.</p></div>
-                    <div class="card animated-card p-6 text-center flex flex-col" data-detector-card="calor"><img data-drawable="true" src="https://shingenieria.com/wp-content/uploads/2021/08/IMG_2932-sh-ingenieria-empresa-seguridad-electronica-bogota-colombia-bosch-sistemas-equipos-deteccion-incendios-tienda-online-fotos-oficina-blog-tipos-sensores-temperatura-photo.jpg" class="w-full h-32 object-cover rounded-md" alt="Detector de Calor"><h3 class="text-lg font-bold mt-4">Detectores de Calor</h3><p class="text-sm mt-2 flex-grow">Útiles en cocinas o estacionamientos.</p></div>
-                    <div class="card animated-card p-6 text-center flex flex-col" data-detector-card="llama"><img data-drawable="true" src="https://zensitec.com.ar/wp-content/uploads/Detector-de-llama-de-acero-inoxidable-FS24X-Honeywell-Zensitec.webp" class="w-full h-32 object-cover rounded-md" alt="Detector de Llama"><h3 class="text-lg font-bold mt-4">Detectores de Llama</h3><p class="text-sm mt-2 flex-grow">Detectan radiación UV/IR de las llamas.</p></div>
-                    <div class="card animated-card p-6 text-center flex flex-col" data-detector-card="manual"><img data-drawable="true" src="imagenes/alarma.JPG" class="w-full h-32 object-cover rounded-md" alt="Estación Manual"><h3 class="text-lg font-bold mt-4">Estaciones Manuales</h3><p class="text-sm mt-2 flex-grow">Permiten la activación manual de la alarma.</p></div>
+    <!-- Pantalla de AR -->
+    <div id="ar-screen" class="screen flex-col justify-center items-center bg-black">
+        <div id="instructions" class="text-center p-8 z-10 bg-black bg-opacity-80 rounded-lg">
+            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara la Magia</h2>
+            <p class="mb-6 max-w-lg text-stone-200">Apunta la cámara de tu dispositivo al marcador para que aparezca el tablero. <br>Puedes descargar el marcador aquí:</p>
+            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block bg-amber-400 text-stone-900 font-bold py-2 px-6 rounded-full hover:bg-amber-300 transition-transform transform hover:scale-105">
+                Descargar Marcador
+            </a>
+            <div class="my-6">
+                <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" alt="Marcador de Ajedrez" class="w-48 h-auto mx-auto border-4 border-white rounded-lg">
             </div>
-             <div class="text-center mt-12">
-                <button id="compare-detectors-btn" class="bg-amber-100 text-amber-800 font-bold py-3 px-8 rounded-lg hover:bg-amber-200 transition-transform transform hover:scale-105 shadow">Comparar Tipos de Detectores</button>
-            </div>
-        </section>
+            <button id="back-btn" class="bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors">
+                Volver
+            </button>
+        </div>
+        <div id="ar-container">
+        </div>
+    </div>
 
-        <section id="detector-detalle" class="page">
-            <button class="back-to-detectors mb-8 bg-stone-200 text-stone-700 font-bold py-2 px-4 rounded-lg hover:bg-stone-300 transition-colors">← Volver a Detección</button>
-            <div class="card p-6 md:p-8">
-                <h2 id="detector-detalle-title" class="text-3xl font-bold text-amber-700"></h2>
-                <div id="detector-detalle-content" class="mt-6 prose max-w-none prose-stone"></div>
-            </div>
-        </section>
-        
-        <section id="detector-comparador" class="page">
-             <button class="back-to-detectors mb-8 bg-stone-200 text-stone-700 font-bold py-2 px-4 rounded-lg hover:bg-stone-300 transition-colors">← Volver a Detección</button>
-            <h2 class="text-3xl font-bold text-center text-stone-800">Comparador de Detectores Automáticos</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-stone-600">Análisis de rendimiento entre los principales tipos de detectores automáticos.</p>
-            <div class="mt-12 card p-4 md:p-8">
-                 <div class="relative w-full h-[500px] mx-auto"><canvas id="detectorChart"></canvas></div>
-            </div>
-        </section>
-
-        <section id="sistemas" class="page">
-            <h2 class="text-3xl font-bold text-center text-stone-800">Comparador Interactivo de Sistemas de Extinción</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-stone-600">Explora los sistemas fijos más comunes. Selecciona uno para ver sus detalles y un análisis comparativo.</p>
-            <div class="mt-12 card p-4 md:p-8">
-                <div class="flex flex-col md:flex-row gap-8">
-                    <div class="md:w-1/3 lg:w-1/4">
-                        <h3 class="font-bold text-lg text-amber-700 mb-4">Selecciona un Sistema</h3>
-                        <div id="system-selector" class="flex flex-col gap-3">
-                            <div>
-                                <h4 class="font-semibold text-stone-600 mb-2">A Base de Agua y Espuma</h4>
-                                <div class="flex flex-col gap-2">
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="rociadores">Rociadores Automáticos</button>
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="mangueras">Gabinetes de Manguera</button>
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="espuma">Gabinetes de Espuma</button>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-stone-600 mb-2 mt-4">Agentes Gaseosos</h4>
-                                <div class="flex flex-col gap-2">
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="novec">Novec 1230</button>
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="fm200">FM-200</button>
-                                    <button class="btn-selector text-left p-3 rounded-lg" data-system="co2">CO₂</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="system-info-container" class="md:w-2/3 lg:w-3/4">
-                        <div id="system-info-panel">
-                               <h3 id="system-title" class="text-2xl font-bold text-stone-800"></h3>
-                               <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div>
-                                    <img id="system-image" src="" alt="Imagen del sistema" class="rounded-lg object-cover w-full h-48 bg-stone-200">
-                                    <p id="system-description" class="mt-4 text-stone-600"></p>
-                                </div>
-                                <div id="system-video-thumbnail" class="w-full aspect-video rounded-lg bg-black bg-cover bg-center video-thumbnail"></div>
-                               </div>
-                               <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                <div class="bg-stone-50 p-4 rounded-lg"><h4 class="font-bold mb-2">✅ Ventajas</h4><ul id="system-pros" class="list-disc list-inside space-y-1"></ul></div>
-                                <div class="bg-stone-50 p-4 rounded-lg"><h4 class="font-bold mb-2">❌ Desventajas</h4><ul id="system-cons" class="list-disc list-inside space-y-1"></ul></div>
-                                <div class="bg-stone-50 p-4 rounded-lg md:col-span-2"><h4 class="font-bold mb-2">📍 Aplicaciones</h4><p id="system-apps"></p></div>
-                               </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-8 pt-8 border-t border-stone-200"><h3 class="text-xl font-bold text-center mb-4">Análisis Comparativo de Sistemas</h3><div class="relative w-full h-96 mx-auto"><canvas id="systemChart"></canvas></div></div>
-            </div>
-        </section>
-
-        <section id="preguntas" class="page"><h2 class="text-3xl font-bold text-center">Preguntas Frecuentes</h2><p class="mt-4 max-w-3xl mx-auto text-center">Aquí respondemos algunas de las dudas más comunes.</p><div id="faq-container" class="mt-12 max-w-4xl mx-auto card p-4"></div></section>
-
-        <section id="recursos" class="page">
-            <h2 class="text-3xl font-bold text-center">Recursos Adicionales</h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center">Explora estos recursos para una comprensión más profunda.</p>
-            <div class="mt-12 space-y-12">
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold text-amber-700">Ingeniería de Sistemas y Mitos Comunes</h3>
-                    <p class="mt-2 text-stone-600">Este video de nivel experto desglosa la física y los principios de diseño de los sistemas de rociadores automáticos.</p>
-                    <div class="mt-4 aspect-video">
-                        <iframe id="recursos-video-1" class="w-full h-full rounded-lg" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </div>
-                </div>
-                <div class="card p-6">
-                    <h3 class="text-xl font-bold text-amber-700">Guía de Inspección y Mantenimiento</h3>
-                    <p class="mt-2 text-stone-600">Una guía que detalla los pasos para la inspección, prueba y mantenimiento de los sistemas de supresión de incendios.</p>
-                    <div class="mt-4 aspect-video">
-                        <iframe id="recursos-video-2" class="w-full h-full rounded-lg" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="examen" class="page"><h2 class="text-3xl font-bold text-center">Examen de Conocimientos</h2><p class="mt-4 max-w-3xl mx-auto text-center">¡Es hora de poner a prueba lo que has aprendido!</p><div id="quiz-container" class="mt-12 max-w-4xl mx-auto card p-6"></div><div id="quiz-result" class="mt-6 max-w-4xl mx-auto"></div></section>
-    </main>
-    
-    <div id="video-modal" class="modal"><div class="modal-content aspect-video"><span class="modal-close">&times;</span><iframe id="video-iframe" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>
-    
-    <div id="drawing-modal" class="modal"><div class="modal-content !w-auto !aspect-auto bg-white p-4 rounded-lg flex flex-col"><span id="drawing-modal-close" class="modal-close !text-black !top-2 !right-4 !font-bold !-mt-2">&times;</span><div id="canvas-controls" class="flex items-center gap-4 mb-2"><label for="colorPicker" class="font-semibold">Color:</label><input type="color" id="colorPicker" value="#ef4444" class="h-8"><button id="eraser-btn" class="p-2 border rounded font-semibold">Goma</button><button id="clear-canvas-btn" class="p-2 border rounded font-semibold">Limpiar</button></div><canvas id="drawing-canvas"></canvas></div></div>
 
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const GITHUB_BASE_URL = 'imagenes/';
-    
-    const systemData = {
-        rociadores: { title: 'Rociadores Automáticos', description: 'Descargan agua sobre el fuego al detectar calor. Cada rociador se activa de forma independiente.', pros: ['Alta fiabilidad y efectividad', 'Bajo costo a largo plazo', 'Utiliza agua, un agente abundante'], cons: ['Puede causar daños por agua', 'No apto para fuegos eléctricos o metales', 'Riesgo de congelamiento'], apps: 'Oficinas, hoteles, hospitales, almacenes, centros comerciales y la mayoría de los edificios.', chart: [9, 8, 9, 3], image: `${GITHUB_BASE_URL}rociadores-automaticos.JPG`, videoId: 'e20G0fM-w1s', videoThumb: `https://img.youtube.com/vi/e20G0fM-w1s/hqdefault.jpg` },
-        mangueras: { title: 'Gabinetes de Manguera', description: 'Proporcionan un suministro de agua para ser utilizado por personal entrenado o bomberos.', pros: ['Gran caudal de agua', 'Mayor alcance que los extintores', 'Recurso para bomberos'], cons: ['Requiere personal entrenado', 'No es un sistema automático', 'Riesgo de uso incorrecto'], apps: 'Edificios de gran altura, complejos industriales, estacionamientos, y como complemento a rociadores.', chart: [3, 7, 9, 5], image: `${GITHUB_BASE_URL}gabinete-maguera-tipo-2.JPG`, videoId: 'P_jKkR36V7Q', videoThumb: `https://img.youtube.com/vi/P_jKkR36V7Q/hqdefault.jpg` },
-        espuma: { title: 'Gabinetes de Espuma', description: 'Sistema manual que utiliza un concentrado de espuma para extinguir fuegos de líquidos inflamables (Clase B).', pros: ['Muy efectivo en fuegos Clase B', 'Crea una capa que previene la reignición', 'Rápida supresión'], cons: ['Requiere personal entrenado', 'No es automático', 'Agente espumante es costoso'], apps: 'Hangares de aviones, refinerías, áreas de almacenamiento de combustible, plantas químicas.', chart: [8, 6, 5, 7], image: `${GITHUB_BASE_URL}gabinete-maguera-espuma.JPG`, videoId: '_V9Vf_Tz4tA', videoThumb: `https://img.youtube.com/vi/_V9Vf_Tz4tA/hqdefault.jpg` },
-        novec: { title: 'Novec 1230', description: 'Agente limpio que extingue el fuego absorbiendo calor. No es conductor, no deja residuos y es seguro para las personas y el medio ambiente.', pros: ['Excelente perfil ambiental', 'Seguro para las personas', 'No daña equipos electrónicos', 'Extinción extremadamente rápida'], cons: ['Costo inicial elevado', 'Requiere un recinto sellado', 'Puede ser costoso'], apps: 'Centros de datos, salas de telecomunicaciones, museos, archivos, bibliotecas y salas de control.', chart: [10, 10, 10, 10], image: `${GITHUB_BASE_URL}Agentes%20gaseosos%20(Novec%201230).JPG`, videoId: 'jD2xX76Fh_0', videoThumb: `https://img.youtube.com/vi/jD2xX76Fh_0/hqdefault.jpg` },
-        fm200: { title: 'FM-200 (HFC-227ea)', description: 'Agente limpio que extingue el fuego por absorción de calor. Ampliamente utilizado para activos críticos, pero con un mayor impacto ambiental.', pros: ['Actuación muy rápida', 'Seguro para las personas', 'No deja residuos', 'Eficaz en una variedad de fuegos'], cons: ['Gas de efecto invernadero (HFC)', 'Requiere un recinto sellado', 'Potencial de calentamiento global (PCG) alto'], apps: 'Común en instalaciones existentes como centros de datos, salas eléctricas y áreas con equipos de alto valor.', chart: [10, 9, 2, 10], image: `${GITHUB_BASE_URL}Agentes%20gaseosos%20(FM-200)%201.JPG`, videoId: 'c2z6R58T-w0', videoThumb: `https://img.youtube.com/vi/c2z6R58T-w0/hqdefault.jpg` },
-        co2: { title: 'CO₂ (Dióxido de Carbono)', description: 'Gas que extingue el fuego desplazando el oxígeno. Es muy efectivo pero letal para las personas en altas concentraciones.', pros: ['Agente muy económico', 'No deja ningún residuo', 'Penetra en obstrucciones', 'Eficaz en fuegos líquidos y eléctricos'], cons: ['¡LETAL para las personas!', 'Requiere estrictas medidas de seguridad', 'Puede causar shock térmico', 'Riesgo de asfixia'], apps: 'Áreas no ocupadas: salas de generadores, cabinas de pintura, transformadores, riesgos industriales.', chart: [9, 1, 8, 6], image: `${GITHUB_BASE_URL}Agentes%20gaseosos%20(co2).JPG`, videoId: 'zF22r1j-o54', videoThumb: `https://img.youtube.com/vi/zF22r1j-o54/hqdefault.jpg` }
-    };
-    const fireClassData = {
-        A: { title: 'Clase A: Sólidos Combustibles', description: 'Materiales sólidos como madera, papel, cartón y plásticos. Producen brasas.', image: `${GITHUB_BASE_URL}clasificacion-de-fuego-tipo-a.JPG` },
-        B: { title: 'Clase B: Líquidos y Gases Inflamables', description: 'Líquidos como gasolina, aceites y gases como propano. No dejan brasas.', image: `${GITHUB_BASE_URL}clasificacion-de-fuego-tipo-b.JPG` },
-        C: { title: 'Clase C: Equipos Eléctricos Energizados', description: 'Fuegos en equipos conectados a la corriente. Requieren agentes no conductores.', image: `${GITHUB_BASE_URL}clasificacion-de-fuego-tipo-c.JPG` },
-        D: { title: 'Clase D: Metales Combustibles', description: 'Metales como magnesio, sodio o aluminio en polvo. Requieren agentes especiales.', image: `https://media.mundoextintor.com/blog/post-13-800x800.jpg?width=800` },
-        K: { title: 'Clase K: Aceites y Grasas de Cocina', description: 'Grasas vegetales o animales en equipos de cocina. Se apagan con agentes que crean espuma (saponificación).', image: `${GITHUB_BASE_URL}clasificacion-de-fuego-tipo-k.JPG` }
-    };
-    const faqData = [{ q: '¿Se activan todos los rociadores a la vez?', a: 'No. Es un mito. Cada rociador se activa individualmente al alcanzar una temperatura específica.' }, { q: '¿Son seguros los agentes limpios para las personas?', a: 'Sí, Novec 1230 y FM-200 son seguros para evacuación. El CO₂ es letal en altas concentraciones.' }, { q: '¿Puede el vapor de agua activar un detector de humo?', a: 'Sí, especialmente los de ionización. Para cocinas o baños, se recomienda un detector de calor.' }, { q: '¿Qué mantenimiento requiere un sistema de extinción?', a: 'Todos requieren inspecciones periódicas según normativas (ej. NFPA) para asegurar su operatividad.' }];
-    const quizQuestions = [{ question: "¿Qué método de transferencia de calor mueve gases calientes a pisos superiores?", options: ["Conducción", "Radiación", "Convección", "Reacción en Cadena"], answer: 2 }, { question: "Un fuego en virutas de magnesio, un metal combustible, se clasifica como:", options: ["Clase A", "Clase B", "Clase C", "Clase D"], answer: 3 }, { question: "¿Qué sistema de extinción es la opción más segura y moderna para proteger un centro de datos?", options: ["Rociadores automáticos", "Gabinetes de manguera", "Novec 1230", "Dióxido de Carbono (CO₂)"], answer: 2 }, { question: "Según los expertos, ¿cuál es la principal causa de muerte en un incendio?", options: ["El calor de las llamas", "La falta de agua", "La inhalación de gases tóxicos y humo", "El ruido de las alarmas"], answer: 2 }, { question: "La etapa inicial de un incendio, que puede ser controlada con un extintor, se denomina:", options: ["Fuego declarado", "Conato de incendio", "Explosión", "Incendio estructural"], answer: 1 }];
-    
-    const detectorData = {
-        humo: { title: 'Detectores de Humo', content: `<h4>Generalidades</h4><p>Son los dispositivos de detección más comunes. Su función es identificar la presencia de partículas de humo en el aire, un indicador temprano de la mayoría de los incendios.</p><h4>Tipos Principales</h4><ul><li><strong>Iónicos:</strong> Muy efectivos para fuegos de llama rápida con partículas pequeñas.</li><li><strong>Fotoeléctricos:</strong> Mejores para detectar fuegos de combustión lenta (latentes) que producen humo más denso.</li><li><strong>De Haz Proyectado (Beam):</strong> Ideales para áreas grandes y abiertas como almacenes o atrios.</li><li><strong>Por Aspiración (ASDs):</strong> De muy alta sensibilidad, para áreas críticas como centros de datos.</li></ul><h4>Diferencias Clave</h4><p>La elección depende del tipo de fuego más probable. Los iónicos son rápidos para llamas, mientras que los fotoeléctricos son mejores para fuegos latentes.</p>` },
-        calor: { title: 'Detectores de Calor', content: `<h4>Generalidades</h4><p>Reaccionan a un aumento significativo de la temperatura. Son ideales para entornos donde los detectores de humo generarían falsas alarmas (cocinas, estacionamientos).</p><h4>Tipos Principales</h4><ul><li><strong>De Temperatura Fija:</strong> Se activan al alcanzar una temperatura predeterminada (ej., 57°C).</li><li><strong>Termovelocimétricos (Rate-of-Rise):</strong> Se activan cuando la temperatura aumenta a una velocidad anormalmente rápida.</li></ul><h4>Diferencias Clave</h4><p>Son más lentos que los detectores de humo pero mucho más resistentes a las falsas alarmas en entornos difíciles.</p>` },
-        llama: { title: 'Detectores de Llama', content: `<h4>Generalidades</h4><p>Detectan la energía radiante (UV o IR) emitida por las llamas. Son extremadamente rápidos.</p><h4>Tipos Principales</h4><ul><li><strong>Ultravioleta (UV):</strong> Reaccionan a la radiación UV. Muy rápidos pero pueden ser activados por soldaduras o relámpagos.</li><li><strong>Infrarrojos (IR):</strong> Analizan patrones de parpadeo de las llamas. Menos susceptibles a falsas alarmas.</li><li><strong>UV/IR Combinados:</strong> Usan ambos sensores para una máxima fiabilidad.</li></ul><h4>Diferencias Clave</h4><p>Su principal ventaja es la velocidad. Son ideales para áreas de alto riesgo con líquidos inflamables.</p>` },
-        manual: { title: 'Estaciones Manuales de Alarma', content: `<h4>Generalidades</h4><p>Permiten a las personas activar manualmente el sistema de alarma. Son un componente esencial y obligatorio en cualquier sistema de detección.</p><h4>Tipos Principales</h4><ul><li><strong>De Acción Simple:</strong> Requieren una sola acción para activarse.</li><li><strong>De Doble Acción:</strong> Requieren dos acciones para evitar activaciones accidentales.</li></ul><h4>Consideraciones Clave</h4><p>Deben estar ubicadas en rutas de evacuación, cerca de las salidas y en lugares claramente visibles y accesibles.</p>` }
-    };
-    
-    const recursosVideos = { video1: "FwD63_4uEzg", video2: "tG01jSg5yR8" };
+        document.addEventListener('DOMContentLoaded', () => {
+            const screens = {
+                welcome: document.getElementById('welcome-screen'),
+                selection: document.getElementById('selection-screen'),
+                ar: document.getElementById('ar-screen'),
+            };
 
-    const allNavLinks = document.querySelectorAll('.nav-link, .nav-link-button');
-    const allPages = document.querySelectorAll('.page');
-    
-    function switchView(targetId) {
-        allPages.forEach(p => p.classList.remove('active'));
-        const targetPage = document.getElementById(targetId);
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-        
-        const mainPageId = targetId.startsWith('detector-') ? 'deteccion' : targetId;
-        allNavLinks.forEach(l => {
-            if (l.dataset.page) {
-                l.classList.toggle('active', l.dataset.page === mainPageId);
-            }
-        });
-        window.scrollTo(0, 0);
-    }
+            const buttons = {
+                start: document.getElementById('start-btn'),
+                continue: document.getElementById('continue-btn'),
+                back: document.getElementById('back-btn'),
+                selectionCards: document.querySelectorAll('.selection-card'),
+            };
+            
+            const arContainer = document.getElementById('ar-container');
+            const instructions = document.getElementById('instructions');
+            let selectedSet = null;
 
-    allNavLinks.forEach(l => l.addEventListener('click', e => {
-        e.preventDefault();
-        switchView(e.currentTarget.dataset.page);
-        document.getElementById('mobile-menu').classList.add('hidden');
-    }));
-
-    document.getElementById('mobile-menu-button').addEventListener('click', () => {
-        document.getElementById('mobile-menu').classList.toggle('hidden');
-    });
-
-    const tetraDots = document.querySelectorAll('.tetra-dot');
-    const tetraInfoBox = document.getElementById('tetra-info-box');
-    tetraDots.forEach(d => {
-        d.addEventListener('mouseenter', () => tetraInfoBox.innerHTML = d.dataset.info);
-        d.addEventListener('mouseleave', () => tetraInfoBox.innerHTML = '<span class="font-semibold text-stone-700">Pasa el cursor sobre un elemento.</span>');
-    });
-
-    const fireClassesSelector = document.getElementById('fire-classes-selector');
-    const fireClassInfo = document.getElementById('fire-class-info');
-    function updateFireClassInfo(fireClass) {
-        const d = fireClassData[fireClass];
-        fireClassInfo.innerHTML = `<div class="flex items-start gap-4"><img src="${d.image}" alt="${d.title}" class="w-24 h-24 rounded-md object-cover cursor-pointer" data-drawable="true" crossorigin="anonymous"><div class="text-left"><h4 class="font-bold text-amber-800">${d.title}</h4><p class="text-stone-600 text-sm mt-1">${d.description}</p></div></div>`;
-        fireClassesSelector.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.class === fireClass));
-    }
-    fireClassesSelector?.addEventListener('click', e => {
-        if (e.target.tagName === 'BUTTON') updateFireClassInfo(e.target.dataset.class);
-    });
-    fireClassInfo.addEventListener('click', (e) => {
-        if (e.target.tagName === 'IMG' && e.target.dataset.drawable) {
-            openDrawingCanvas(e.target.src);
-        }
-    });
-
-    let systemChart;
-    const systemChartCanvas = document.getElementById('systemChart');
-    if (systemChartCanvas) {
-        systemChart = new Chart(systemChartCanvas.getContext('2d'), { type: 'bar', data: { labels: ['Velocidad', 'Seguridad Humana', 'Impacto Ambiental', 'Seguridad Equipos'], datasets: [{ data: [], backgroundColor: ['#fb923c', '#34d399', '#22c55e', '#3b82f6'], label: 'Puntuación (de 10)' }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, max: 10, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
-    }
-
-    function updateSystemView(systemKey) {
-        const d = systemData[systemKey];
-        document.getElementById('system-title').textContent = d.title;
-        document.getElementById('system-description').textContent = d.description;
-        document.getElementById('system-image').src = d.image;
-        document.getElementById('system-apps').textContent = d.apps;
-        document.getElementById('system-pros').innerHTML = d.pros.map(p => `<li>${p}</li>`).join('');
-        document.getElementById('system-cons').innerHTML = d.cons.map(c => `<li>${c}</li>`).join('');
-        const thumb = document.getElementById('system-video-thumbnail');
-        thumb.style.backgroundImage = `url(${d.videoThumb})`;
-        thumb.dataset.videoId = d.videoId;
-        if(systemChart) {
-            systemChart.data.datasets[0].data = d.chart;
-            systemChart.update();
-        }
-        document.getElementById('system-selector').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.system === systemKey));
-        document.getElementById('system-info-container').style.display = 'block';
-    }
-    document.getElementById('system-selector')?.addEventListener('click', e => {
-        if (e.target.tagName === 'BUTTON') updateSystemView(e.target.dataset.system);
-    });
-
-    const faqContainer = document.getElementById('faq-container');
-    if(faqContainer){
-        faqData.forEach(i => {
-            const item = document.createElement('div');
-            item.className = 'faq-item';
-            item.innerHTML = `<div class="faq-question flex justify-between items-center p-4"><h4 class="font-semibold">${i.q}</h4><span class="transform transition-transform text-amber-600 text-xl">▼</span></div><div class="faq-answer px-4 pb-4 text-stone-600"><p>${i.a}</p></div>`;
-            faqContainer.appendChild(item);
-        });
-        faqContainer.addEventListener('click', e => {
-            const q = e.target.closest('.faq-question');
-            if (q) {
-                const a = q.nextElementSibling;
-                const icon = q.querySelector('span');
-                const isOpen = a.style.maxHeight && a.style.maxHeight !== '0px';
-                document.querySelectorAll('.faq-answer').forEach(ans => ans.style.maxHeight = '0px');
-                document.querySelectorAll('.faq-question span').forEach(ic => ic.style.transform = 'rotate(0deg)');
-                if (!isOpen) {
-                    a.style.maxHeight = a.scrollHeight + "px";
-                    icon.style.transform = 'rotate(-180deg)';
+            function navigateTo(screenName) {
+                Object.values(screens).forEach(screen => screen.classList.remove('active'));
+                if(screens[screenName]) {
+                    screens[screenName].classList.add('active');
                 }
             }
-        });
-    }
 
-    const quizContainer = document.getElementById('quiz-container');
-    if (quizContainer) {
-        let quizHTML = '<form id="quiz-form">';
-        quizQuestions.forEach((q, i) => {
-            quizHTML += `<div class="mb-6"><p class="font-semibold mb-2">${i + 1}. ${q.question}</p>`;
-            q.options.forEach((o, oi) => {
-                quizHTML += `<label class="block my-1 p-3 rounded-lg hover:bg-stone-100 transition-colors cursor-pointer"><input type="radio" name="q${i}" value="${oi}" required class="mr-3 accent-amber-600">${o}</label>`;
-            });
-            quizHTML += `</div>`;
-        });
-        quizHTML += `<button type="submit" class="bg-amber-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-amber-700 transition-colors">Enviar Respuestas</button></form>`;
-        quizContainer.innerHTML = quizHTML;
-        document.getElementById('quiz-form').addEventListener('submit', e => {
-            e.preventDefault();
-            let score = 0;
-            let resultsHTML = '';
-            quizQuestions.forEach((q, i) => {
-                const a = document.querySelector(`input[name="q${i}"]:checked`);
-                const correct = a && +a.value === q.answer;
-                if (correct) score++;
-                resultsHTML += `<div class="p-3 mb-2 rounded-lg ${correct? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} "><p><strong>Pregunta ${i + 1}: ${correct? 'Correcto.' : 'Incorrecto.'}</strong></p>${!correct? `<p class="text-sm mt-1">La respuesta correcta era: "${q.options[q.answer]}".</p>` : ''}</div>`;
-            });
-            const p = (score / quizQuestions.length) * 100;
-            document.getElementById('quiz-result').innerHTML = `<div class="card p-6"><h3 class="text-2xl font-bold text-center mb-4">Puntuación Final: ${score}/${quizQuestions.length} (${p.toFixed(0)}%)</h3>${resultsHTML}</div>`;
-            document.getElementById('quiz-result').scrollIntoView({ behavior: 'smooth' });
-        });
-    }
-
-    const videoModal = document.getElementById('video-modal');
-    const videoIframe = document.getElementById('video-iframe');
-    function openVideoModal(videoId) { videoIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`; videoModal.style.display = 'flex'; }
-    function closeVideoModal() { videoModal.style.display = 'none'; videoIframe.src = ''; }
-    document.querySelectorAll('.video-thumbnail').forEach(el => el.addEventListener('click', (e) => openVideoModal(e.currentTarget.dataset.videoId)));
-    document.querySelector('#video-modal .modal-close').addEventListener('click', closeVideoModal);
-    videoModal.addEventListener('click', (e) => e.target === videoModal && closeVideoModal());
-
-    document.getElementById('detector-cards-container').addEventListener('click', (e) => {
-        const card = e.target.closest('[data-detector-card]');
-        const img = e.target.closest('img[data-drawable]');
-        if (img) {
-            openDrawingCanvas(img.src);
-        } else if (card) {
-            const data = detectorData[card.dataset.detectorCard];
-            if (data) {
-                document.getElementById('detector-detalle-title').textContent = data.title;
-                document.getElementById('detector-detalle-content').innerHTML = data.content;
-                switchView('detector-detalle');
-            }
-        }
-    });
-
-    document.querySelectorAll('.back-to-detectors').forEach(btn => {
-        btn.addEventListener('click', () => switchView('deteccion'));
-    });
-    
-    document.getElementById('compare-detectors-btn').addEventListener('click', () => switchView('detector-comparador'));
-    
-    let detectorChart;
-    const detectorChartCanvas = document.getElementById('detectorChart');
-    if(detectorChartCanvas) {
-        detectorChart = new Chart(detectorChartCanvas.getContext('2d'), {
-            type: 'radar',
-            data: {
-                labels: ['Velocidad', 'Resistencia a Falsas Alarmas', 'Costo Efectividad', 'Ambientes Hostiles', 'Detección Incipiente'],
-                datasets: [
-                    { label: 'Humo (Fotoeléctrico)', data: [7, 6, 8, 5, 9], fill: true, backgroundColor: 'rgba(251, 146, 60, 0.2)', borderColor: 'rgb(251, 146, 60)', pointBackgroundColor: 'rgb(251, 146, 60)'},
-                    { label: 'Calor', data: [4, 9, 9, 9, 3], fill: true, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgb(239, 68, 68)', pointBackgroundColor: 'rgb(239, 68, 68)' },
-                    { label: 'Llama (UV/IR)', data: [10, 8, 4, 8, 6], fill: true, backgroundColor: 'rgba(59, 130, 246, 0.2)', borderColor: 'rgb(59, 130, 246)', pointBackgroundColor: 'rgb(59, 130, 246)' }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 10 } } }
-        });
-    }
-
-    const drawingModal = document.getElementById('drawing-modal');
-    const drawingCanvas = document.getElementById('drawing-canvas');
-    const ctx = drawingCanvas.getContext('2d');
-    const colorPicker = document.getElementById('colorPicker');
-    const eraserBtn = document.getElementById('eraser-btn');
-    const clearBtn = document.getElementById('clear-canvas-btn');
-    let isDrawing = false;
-    let isErasing = false;
-
-    function openDrawingCanvas(imgSrc) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = imgSrc;
-        img.onload = () => {
-            const aspectRatio = img.width / img.height;
-            const maxWidth = window.innerWidth * 0.8;
-            const maxHeight = window.innerHeight * 0.7;
-            let canvasWidth = img.width;
-            let canvasHeight = img.height;
-
-            if (canvasWidth > maxWidth) {
-                canvasWidth = maxWidth;
-                canvasHeight = canvasWidth / aspectRatio;
-            }
-            if (canvasHeight > maxHeight) {
-                canvasHeight = maxHeight;
-                canvasWidth = canvasHeight * aspectRatio;
-            }
+            buttons.start.addEventListener('click', () => navigateTo('selection'));
             
-            drawingCanvas.width = canvasWidth;
-            drawingCanvas.height = canvasHeight;
+            buttons.back.addEventListener('click', () => {
+                arContainer.innerHTML = ''; 
+                instructions.style.display = 'block';
+                navigateTo('selection');
+            });
+
+            buttons.selectionCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    buttons.selectionCards.forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    selectedSet = card.dataset.set;
+                    buttons.continue.disabled = false;
+                });
+            });
+
+            buttons.continue.addEventListener('click', () => {
+                if (selectedSet) {
+                    navigateTo('ar');
+                    setTimeout(() => {
+                        instructions.style.display = 'none';
+                        setupARScene(selectedSet);
+                    }, 4000); 
+                }
+            });
             
-            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-            ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height);
-            drawingModal.style.display = 'flex';
-        };
-        img.onerror = () => {
-            alert("No se pudo cargar la imagen para dibujar. Puede ser un problema de CORS si la imagen no está en el mismo dominio.");
-        }
-    }
+            function setupARScene(pieceSet) {
+                arContainer.innerHTML = '';
+                
+                const sceneEl = document.createElement('a-scene');
+                sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;');
+                sceneEl.setAttribute('color-space', 'sRGB');
+                sceneEl.setAttribute('renderer', 'colorManagement: true, physicallyCorrectLights');
+                sceneEl.setAttribute('vr-mode-ui', 'enabled: false');
+                sceneEl.setAttribute('device-orientation-permission-ui', 'enabled: false');
 
-    function startPosition(e) { isDrawing = true; draw(e); }
-    function endPosition() { isDrawing = false; ctx.beginPath(); }
-    function draw(e) {
-        if (!isDrawing) return;
-        const rect = drawingCanvas.getBoundingClientRect();
-        const x = e.clientX ? e.clientX - rect.left : e.touches[0].clientX - rect.left;
-        const y = e.clientY ? e.clientY - rect.top : e.touches[0].clientY - rect.top;
+                const cameraEl = document.createElement('a-camera');
+                cameraEl.setAttribute('position', '0 0 0');
+                cameraEl.setAttribute('look-controls', 'enabled: false');
+                sceneEl.appendChild(cameraEl);
 
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = isErasing ? '#ffffff' : colorPicker.value;
-        ctx.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
-        
-        ctx.lineTo(x, y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    }
+                const targetEntity = document.createElement('a-entity');
+                targetEntity.setAttribute('mindar-image-target', 'targetIndex: 0');
+                
+                const pieces = createChessPieces(pieceSet);
+                pieces.forEach(piece => targetEntity.appendChild(piece));
 
-    drawingCanvas.addEventListener('mousedown', startPosition);
-    drawingCanvas.addEventListener('mouseup', endPosition);
-    drawingCanvas.addEventListener('mousemove', draw);
-    drawingCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startPosition(e); });
-    drawingCanvas.addEventListener('touchend', (e) => { e.preventDefault(); endPosition(); });
-    drawingCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+                sceneEl.appendChild(targetEntity);
+                arContainer.appendChild(sceneEl);
+            }
 
-    eraserBtn.addEventListener('click', () => { isErasing = !isErasing; eraserBtn.classList.toggle('bg-amber-200', isErasing); });
-    clearBtn.addEventListener('click', () => {
-        const currentImage = new Image();
-        currentImage.src = drawingCanvas.toDataURL(); // This won't work for CORS images
-        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-        ctx.drawImage(drawingCanvas.bgImage, 0, 0, drawingCanvas.width, drawingCanvas.height);
-    });
+            function createChessPieces(pieceSet) {
+                const pieces = [];
+                const boardSize = 1.4;
+                const squareSize = boardSize / 8;
+                const offset = -boardSize / 2 + squareSize / 2;
 
-    document.getElementById('drawing-modal-close').addEventListener('click', () => drawingModal.style.display = 'none');
+                const pieceStyles = {
+                    classic: {
+                        pawn: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
+                        rook: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
+                        knight: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #E5E7EB' },
+                        bishop: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #E5E7EB' },
+                        queen: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #FBBF24' },
+                        king: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #FDE68A' },
+                        
+                        pawn_b: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #4B5563' },
+                        rook_b: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #4B5563' },
+                        knight_b: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #4B5563' },
+                        bishop_b: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #4B5563' },
+                        queen_b: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #6B7280' },
+                        king_b: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #1F2937' },
+                    },
+                    futuristic: {
+                        pawn: { geometry: 'primitive: octahedron; radius: 0.06', material: 'color: #67E8F9; metalness: 0.8; roughness: 0.2' },
+                        rook: { geometry: 'primitive: box; width: 0.12; height: 0.12; depth: 0.12', material: 'color: #A78BFA; metalness: 0.8; roughness: 0.2' },
+                        knight: { geometry: 'primitive: torus-knot; radius: 0.05; radiusTubular: 0.015; p:2; q:3', material: 'color: #F472B6; metalness: 0.8; roughness: 0.2' },
+                        bishop: { geometry: 'primitive: tetrahedron; radius: 0.1', material: 'color: #C084FC; metalness: 0.8; roughness: 0.2' },
+                        queen: { geometry: 'primitive: cone; height: 0.2; radiusBottom: 0.08', material: 'color: #34D399; metalness: 0.8; roughness: 0.2' },
+                        king: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #FBBF24; metalness: 0.8; roughness: 0.2' },
+                        
+                        pawn_b: { geometry: 'primitive: octahedron; radius: 0.06', material: 'color: #0E7490; metalness: 0.8; roughness: 0.2' },
+                        rook_b: { geometry: 'primitive: box; width: 0.12; height: 0.12; depth: 0.12', material: 'color: #6D28D9; metalness: 0.8; roughness: 0.2' },
+                        knight_b: { geometry: 'primitive: torus-knot; radius: 0.05; radiusTubular: 0.015; p:2; q:3', material: 'color: #BE185D; metalness: 0.8; roughness: 0.2' },
+                        bishop_b: { geometry: 'primitive: tetrahedron; radius: 0.1', material: 'color: #7E22CE; metalness: 0.8; roughness: 0.2' },
+                        queen_b: { geometry: 'primitive: cone; height: 0.2; radiusBottom: 0.08', material: 'color: #047857; metalness: 0.8; roughness: 0.2' },
+                        king_b: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #B45309; metalness: 0.8; roughness: 0.2' },
+                    }
+                };
+                
+                const style = pieceStyles[pieceSet];
+                
+                const boardSetup = [
+                    ['rook_b', 'knight_b', 'bishop_b', 'queen_b', 'king_b', 'bishop_b', 'knight_b', 'rook_b'],
+                    ['pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b', 'pawn_b'],
+                    [], [], [], [],
+                    ['pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn', 'pawn'],
+                    ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'],
+                ];
+                
+                for (let row = 0; row < boardSetup.length; row++) {
+                    const rowPieces = boardSetup[row];
+                    for (let col = 0; col < rowPieces.length; col++) {
+                         const pieceType = rowPieces[col];
+                         if (pieceType) {
+                            const pieceEl = document.createElement('a-entity');
+                            const x = offset + col * squareSize;
+                            let z;
+                            if (row <= 1) z = offset + row * squareSize;
+                            else z = offset + (row + 4) * squareSize;
 
-
-    document.getElementById('recursos-video-1').src = `https://www.youtube.com/embed/${recursosVideos.video1}`;
-    document.getElementById('recursos-video-2').src = `https://www.youtube.com/embed/${recursosVideos.video2}`;
-
-    switchView('inicio');
-    if (fireClassesSelector) updateFireClassInfo('A');
-    if (document.getElementById('system-selector')) {
-        document.getElementById('system-info-container').style.display = 'none';
-    }
-});
-</script>
+                            pieceEl.setAttribute('position', `${x} 0 ${z}`);
+                            pieceEl.setAttribute('geometry', style[pieceType].geometry);
+                            pieceEl.setAttribute('material', style[pieceType].material);
+                            pieces.push(pieceEl);
+                         }
+                    }
+                }
+                return pieces;
+            }
+        });
+    </script>
 </body>
 </html>
+
 
 
 
