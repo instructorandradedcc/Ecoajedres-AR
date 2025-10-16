@@ -19,7 +19,8 @@
         .game-status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; z-index: 100; font-size: 1.2rem; display: none; }
         #ar-instructions-ui { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9991; display: flex; justify-content: center; align-items: center; pointer-events: none; background-color: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 15px; text-align: center; font-size: 1.2rem; transition: opacity 0.3s; }
         #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
-        
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .a-enter-vr-button {
             position: fixed !important; bottom: 20px !important; left: 50% !important;
             transform: translateX(-50%) !important; background-color: #10B981 !important;
@@ -27,12 +28,6 @@
             padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
         }
-        
-        #initial-loading-screen { background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Fondo+Medieval'); background-size: cover; background-position: center; }
-        #progress-bar-container { width: 80%; max-width: 500px; height: 20px; background-color: #4a2a15; border-radius: 10px; border: 2px solid #e2b467; overflow: hidden; position: relative; }
-        #progress-bar { width: 0%; height: 100%; background-color: #fBBF24; transition: width 0.5s ease; }
-        #progress-icon { font-size: 32px; position: absolute; top: 50%; transform: translateY(-50%) translateX(-50%); left: 0%; transition: left 0.5s ease; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-
         #ar-entry-loading-screen { background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)); z-index: 9990; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .pulsing-icon { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -51,8 +46,27 @@
     
     <div id="initial-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
         <h2 id="loading-title" class="text-4xl font-bold mb-4 text-amber-300">Preparando el Campo de Batalla</h2>
-        <div id="progress-bar-container" class="mb-4"><div id="progress-bar"></div><div id="progress-icon">♘</div></div>
-        <p id="loading-text" class="text-stone-300 max-w-xl mb-6">Comprobando arsenal...</p>
+        <div id="welcome-box" class="bg-indigo-50 border-l-4 border-indigo-500 text-indigo-700 p-4 my-6 max-w-lg" role="alert">
+            <p class="font-bold">¡Bienvenido, Mago!</p>
+            <p id="welcome-text" class="mt-2">Comprobando si tus artefactos mágicos están listos...</p>
+        </div>
+        <div id="loading-controls" class="mt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
+             <button id="download-assets-btn" class="bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition duration-300 text-lg shadow-md w-full sm:w-auto flex justify-center items-center hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Descargar Recursos Mágicos
+            </button>
+            <button id="continue-to-selection-btn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition duration-300 text-lg shadow-md w-full sm:w-auto hidden">
+                Continuar
+            </button>
+        </div>
+        <div id="loading-status" class="mt-6 hidden w-full max-w-lg">
+            <div class="flex justify-center items-center"><div class="loader"></div></div>
+            <p id="loading-text" class="text-center text-stone-300 mt-2">Iniciando...</p>
+            <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
+                <div id="loading-progress-bar" class="bg-amber-400 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+        <button id="clear-cache-btn" class="mt-8 bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition text-sm">Limpiar Caché y Recargar</button>
     </div>
 
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
@@ -117,7 +131,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.6.0"; // Versión con CDN de jsDelivr y gestor de carga de assets
+            const APP_VERSION = "2.7.0"; // Versión con carga manual de assets y caché robusta
             const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
             let game = new Chess();
@@ -126,6 +140,7 @@
             let legalMoveEntities = [];
             let playerColor = 'w';
             let gameMode = 'pva';
+            let assets = [];
             
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
@@ -139,6 +154,9 @@
             };
             const buttons = {
                 start: document.getElementById('start-btn'),
+                downloadAssets: document.getElementById('download-assets-btn'),
+                continueToSelection: document.getElementById('continue-to-selection-btn'),
+                clearCache: document.getElementById('clear-cache-btn'),
                 continueSet: document.getElementById('continue-set-btn'),
                 continueBoard: document.getElementById('continue-board-btn'),
                 startGame: document.getElementById('start-game-btn'),
@@ -154,9 +172,6 @@
             const versionDisplay = document.getElementById('app-version');
             const arInstructionsUI = document.getElementById('ar-instructions-ui');
             const arInstructionsText = document.getElementById('ar-instructions-text');
-            const loadingText = document.getElementById('loading-text');
-            const progressBar = document.getElementById('progress-bar');
-            const progressIcon = document.getElementById('progress-icon');
             const arLoadingStatusText = document.getElementById('ar-loading-status-text');
             
             let selectedSet = null;
@@ -166,11 +181,11 @@
             
             versionDisplay.textContent = `v${APP_VERSION}`;
             
-            // **FIX 1: Using jsDelivr CDN for reliable asset hosting**
+            const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/';
             const assetMap = {
                 'harry-potter': {
-                    w: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Gryffindor.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Dumbledore.glb', scale: '0.02 0.02 0.02' } },
-                    b: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Sytherin.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby2.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter_Hollow.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Voldemort.glb', scale: '0.02 0.02 0.02' } }
+                    w: { p: { url: `${GITHUB_BASE_URL}Pawn_Gryffindor.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02' }, k: { url: `${GITHUB_BASE_URL}King_Dumbledore.glb`, scale: '0.02 0.02 0.02' } },
+                    b: { p: { url: `${GITHUB_BASE_URL}Pawn_Sytherin.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby2.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter_Hollow.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: `${GITHUB_BASE_URL}King_Voldemort.glb`, scale: '0.02 0.02 0.02' } }
                 }
             };
 
@@ -191,29 +206,34 @@
                 navigateTo('initialLoading');
                 initializeApp();
             });
+            
+            buttons.downloadAssets.addEventListener('click', downloadAndCacheAssets);
+            buttons.continueToSelection.addEventListener('click', () => navigateTo('selection'));
+            buttons.clearCache.addEventListener('click', async () => {
+                try {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(key => {
+                        if (key.startsWith('ajedrez-ar-cache')) return caches.delete(key);
+                    }));
+                    alert('Caché limpiada. La página se recargará.');
+                    window.location.reload();
+                } catch(e) {
+                    alert('Error al limpiar la caché.');
+                }
+            });
 
             async function initializeApp() {
-                const loadingMessages = ["Forjando armaduras...", "Consultando grimorios...", "Afilando espadas...", "Invocando el tablero...", "Desplegando tropas..."];
-                let msgInterval = setInterval(() => {
-                    loadingText.textContent = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
-                }, 1500);
-
+                const welcomeText = document.getElementById('welcome-text');
                 const assetsInCache = await checkCache();
                 if (assetsInCache) {
-                    loadingText.textContent = "¡Recursos encontrados! Iniciando...";
-                    updateProgress(100);
+                    welcomeText.textContent = "¡Tus artefactos ya están en la recámara! Puedes continuar.";
+                    buttons.downloadAssets.classList.add('hidden');
+                    buttons.continueToSelection.classList.remove('hidden');
                 } else {
-                    await downloadAndCacheAssets();
+                    welcomeText.textContent = "Para comenzar el duelo, necesitas descargar los artefactos mágicos (modelos 3D). Se guardarán para futuras partidas.";
+                    buttons.downloadAssets.classList.remove('hidden');
+                    buttons.continueToSelection.classList.add('hidden');
                 }
-
-                clearInterval(msgInterval);
-                cleanOldCaches();
-                setTimeout(() => navigateTo('selection'), 1000);
-            }
-            
-            function updateProgress(percentage) {
-                progressBar.style.width = `${percentage}%`;
-                progressIcon.style.left = `${percentage}%`;
             }
 
             async function checkCache() {
@@ -238,40 +258,54 @@
                 return Array.from(urls);
             }
 
+            async function fetchWithCache(url, cache) {
+                const cachedResponse = await cache.match(url);
+                if (cachedResponse) return cachedResponse;
+                
+                const networkResponse = await fetch(url);
+                if (networkResponse.ok) {
+                    await cache.put(url, networkResponse.clone());
+                }
+                return networkResponse;
+            }
+
             async function downloadAndCacheAssets() {
+                const loadingStatusDiv = document.getElementById('loading-status');
+                const loadingText = document.getElementById('loading-text');
+                const progressBar = document.getElementById('loading-progress-bar');
+                
+                loadingStatusDiv.classList.remove('hidden');
+                buttons.downloadAssets.disabled = true;
+
                 if (!('caches' in window)) {
-                    updateProgress(100);
+                    loadingText.textContent = "La API de Caché no está disponible. No se pueden guardar los modelos.";
                     return;
                 }
+                
                 const cache = await caches.open(CACHE_NAME);
                 const urls = getAllAssetUrls();
                 let loadedCount = 0;
-                
+
                 const promises = urls.map(async (url) => {
                     try {
-                        const request = new Request(url, { mode: 'cors' });
-                        const response = await fetch(request);
-                        if (!response.ok) throw new Error(`Failed to fetch: ${url}`);
-                        await cache.put(request, response.clone());
+                        const response = await fetchWithCache(url, cache);
+                        if (!response.ok) throw new Error(`Fallo al descargar: ${url}`);
                     } catch (error) {
-                        console.error(`Failed to download or cache ${url}:`, error);
+                        console.error(error);
                     } finally {
                         loadedCount++;
-                        updateProgress((loadedCount / urls.length) * 100);
+                        progressBar.style.width = `${(loadedCount / urls.length) * 100}%`;
+                        loadingText.textContent = `Descargando artefacto ${loadedCount} de ${urls.length}...`;
                     }
                 });
-                await Promise.all(promises);
-            }
 
-            async function cleanOldCaches() {
-                if (!('caches' in window)) return;
-                const keys = await caches.keys();
-                const promises = keys.map(key => {
-                    if (key.startsWith('ajedrez-ar-cache-v') && key !== CACHE_NAME) {
-                        return caches.delete(key);
-                    }
-                });
                 await Promise.all(promises);
+
+                loadingText.textContent = "¡Todos los artefactos han sido descargados y guardados!";
+                setTimeout(() => {
+                    loadingStatusDiv.classList.add('hidden');
+                    navigateTo('selection');
+                }, 1500);
             }
 
             document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
@@ -310,7 +344,7 @@
                 setTimeout(() => {
                     navigateTo('ar');
                     setupARScene();
-                }, 500); // Reduced delay
+                }, 500);
             });
 
             function setupARScene() {
@@ -345,17 +379,14 @@
                 manageARAssetLoading();
             }
             
-            // **FIX 2: New function to manage asset loading before enabling AR button**
             function manageARAssetLoading() {
                 const assetsEl = sceneEl.querySelector('a-assets');
                 assetsEl.addEventListener('loaded', () => {
-                    console.log("All AR assets loaded successfully!");
                     arLoadingStatusText.textContent = "¡Portal listo! Presiona el botón para invocar.";
                     sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
                 });
                 assetsEl.addEventListener('timeout', () => {
-                    console.error("AR assets timed out.");
-                    arLoadingStatusText.textContent = "Error: No se pudieron cargar los artefactos mágicos. Revisa tu conexión.";
+                    arLoadingStatusText.textContent = "Error: No se pudieron cargar los artefactos mágicos.";
                 });
             }
 
@@ -367,7 +398,7 @@
                     this.boardPlaced = false;
                     sceneEl.addEventListener('enter-vr', () => {
                         if (sceneEl.is('ar-mode')) {
-                            navigateTo('ar'); // Ensure we are on the AR screen
+                            navigateTo('ar');
                             arInstructionsUI.classList.remove('hidden');
                             buttons.exitAR.style.display = 'block';
                         }
