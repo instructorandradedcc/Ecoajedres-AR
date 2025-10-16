@@ -8,9 +8,23 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <style>
         /* Estilos generales */
-        body { overscroll-behavior: none; }
+        body { 
+            overscroll-behavior: none; 
+            overflow-y: auto; /* ✅ Habilitar scroll por defecto */
+        }
         html.ar-active, body.ar-active { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }
-        .screen { display: none; position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; overflow-y: auto; transition: opacity 0.5s ease-in-out; z-index: 10; }
+        .screen { 
+            display: none; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            min-height: 100vh; /* Usar altura del viewport */
+            overflow-y: auto; 
+            transition: opacity 0.5s ease-in-out; 
+            z-index: 10; 
+            padding-bottom: 8rem; /* Espacio extra al final para que los botones no se corten */
+        }
         .screen.active { display: flex; }
         .selection-card, .board-card, .color-swatch, .mode-card { transition: all 0.3s ease; border: 4px solid transparent; }
         .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected { border-color: #FBBF24; transform: scale(1.05); }
@@ -23,17 +37,29 @@
         /* --- ESTILOS MEJORADOS PARA LA PANTALLA DE CARGA --- */
         #initial-loading-screen, #ar-entry-loading-screen {
             background: radial-gradient(circle, #282142 0%, #1c1917 100%);
-            overflow: hidden; /* Para contener las partículas */
+            overflow: hidden; 
         }
-        #loading-content {
-            z-index: 2; /* Asegura que el contenido esté sobre las partículas */
-        }
+        #loading-content { z-index: 2; }
         #piece-loader { position: relative; width: 90px; height: 90px; }
         #piece-loader svg { width: 100%; height: 100%; fill: #fde047; filter: drop-shadow(0 0 10px #facc15); position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out; transform: scale(0.8); }
         #piece-loader svg.active { opacity: 1; transform: scale(1); }
         .magic-progress-container { width: 100%; background-color: #4a2a15; border-radius: 20px; border: 3px solid #6b4629; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); padding: 4px; }
         .loading-progress-bar { background: linear-gradient(90deg, #facc15 0%, #fde047 100%); box-shadow: 0 0 8px #facc15, 0 0 15px #fde047; border-radius: 12px; position: relative; transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1); }
-        .loading-progress-bar::after { content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: white; border-radius: 50%; box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; opacity: 1; transition: opacity 0.3s; }
+        .loading-progress-bar::after { 
+            content: ''; 
+            position: absolute; right: -8px; top: 50%; 
+            transform: translateY(-50%); 
+            width: 20px; height: 20px; 
+            background: white; border-radius: 50%; 
+            opacity: 1; transition: opacity 0.3s;
+            /* ✅ Animación de pulso mágico */
+            animation: pulse-glow 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; }
+            50% { box-shadow: 0 0 15px 7px white, 0 0 30px 12px #fde047; }
+            100% { box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; }
+        }
 
         /* Partículas Mágicas */
         .particle-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
@@ -134,7 +160,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.8.0"; // Versión con Interacción de Tablero y Carga Mejorada
+            const APP_VERSION = "3.9.0"; // Versión con Feedback de Caché y Scroll
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
             // --- Estado del juego y variables globales ---
@@ -219,6 +245,13 @@
                 const progressBar = document.getElementById('initial-loading-progress-bar');
                 const loadingText = document.getElementById('loading-text');
 
+                // ✅ Lógica de Feedback de Caché
+                if (localStorage.getItem('assets_preloaded_v1')) {
+                    loadingText.textContent = "Verificando artefactos en el castillo...";
+                } else {
+                    loadingText.textContent = "Forjando nuevos artefactos mágicos...";
+                }
+
                 const tempScene = document.createElement('a-scene');
                 tempScene.style.cssText = 'position: absolute; height: 1px; width: 1px; left: -9999px; top: -9999px;';
                 const assetsEl = document.createElement('a-assets');
@@ -245,12 +278,15 @@
                     const progress = event.detail.progress * 100;
                     if (!isNaN(progress)) {
                         progressBar.style.width = `${progress}%`;
-                        loadingText.textContent = `Forjando artefactos mágicos... (${Math.round(progress)}%)`;
+                        if (!localStorage.getItem('assets_preloaded_v1')) {
+                             loadingText.textContent = `Forjando nuevos artefactos mágicos... (${Math.round(progress)}%)`;
+                        }
                     }
                 });
 
                 assetsEl.addEventListener('loaded', () => {
                     loadingText.textContent = "¡Arsenal mágico listo!";
+                    localStorage.setItem('assets_preloaded_v1', 'true'); // Guardar en caché
                     setTimeout(() => {
                         document.body.removeChild(tempScene);
                         navigateTo('selection');
@@ -353,21 +389,15 @@
                 }, 100); 
             }
             
-            // --- ✅ COMPONENTE AR CON INTERACCIÓN TÁCTIL ---
             AFRAME.registerComponent('ar-logic', {
                  init: function() {
                     this.reticle = document.querySelector('#reticle');
                     this.boardContainer = document.querySelector('#board-container');
                     this.hitTestSource = null;
                     
-                    // Estado para la interacción táctil
                     this.touchState = {
-                        dragging: false,
-                        pinching: false,
-                        startDist: 0,
-                        startAngle: 0,
-                        initialScale: new THREE.Vector3(),
-                        initialRotation: new THREE.Euler(),
+                        dragging: false, pinching: false, startDist: 0, startAngle: 0,
+                        initialScale: new THREE.Vector3(), initialRotation: new THREE.Euler(),
                         lastTouch: { x: 0, y: 0 }
                     };
 
@@ -407,8 +437,7 @@
                         
                         document.getElementById('ar-instructions-ui').classList.remove('hidden');
                         buttons.exitAR.style.display = 'block';
-                        boardPlaced = false;
-                        game.reset();
+                        boardPlaced = false; game.reset();
                         this.boardContainer.setAttribute('visible', 'false');
                         this.boardContainer.innerHTML = '';
                         try {
@@ -446,7 +475,6 @@
                 },
                 handleGameClick: function(evt) { if (boardPlaced && !this.touchState.dragging && !this.touchState.pinching) handleGameClick(evt); },
                 
-                // --- Métodos de Interacción Táctil ---
                 onTouchStart: function(e) {
                     if (!boardPlaced || e.touches.length > 2) return;
                     e.preventDefault();
@@ -456,12 +484,9 @@
                         this.touchState.lastTouch.x = e.touches[0].clientX;
                         this.touchState.lastTouch.y = e.touches[0].clientY;
                     } else if (e.touches.length === 2) {
-                        this.touchState.dragging = false;
-                        this.touchState.pinching = true;
-                        
+                        this.touchState.dragging = false; this.touchState.pinching = true;
                         this.touchState.initialScale.copy(this.boardContainer.object3D.scale);
                         this.touchState.initialRotation.copy(this.boardContainer.object3D.rotation);
-
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
                         const dy = e.touches[0].clientY - e.touches[1].clientY;
                         this.touchState.startDist = Math.sqrt(dx * dx + dy * dy);
@@ -474,19 +499,24 @@
 
                     if (this.touchState.dragging && e.touches.length === 1) {
                         const deltaX = e.touches[0].clientX - this.touchState.lastTouch.x;
+                        const deltaY = e.touches[0].clientY - this.touchState.lastTouch.y;
                         const boardPos = this.boardContainer.object3D.position;
-                        // Mover el tablero en el plano horizontal (X, Z)
-                        boardPos.x += deltaX * 0.001; // El factor de sensibilidad puede ajustarse
+                        // Mover el tablero en el plano horizontal (X, Z) - ajustado para ser más intuitivo
+                        const camera = this.el.sceneEl.camera;
+                        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                        boardPos.add(right.multiplyScalar(deltaX * 0.001));
+                        boardPos.add(forward.multiplyScalar(deltaY * 0.001));
+
                         this.touchState.lastTouch.x = e.touches[0].clientX;
+                        this.touchState.lastTouch.y = e.touches[0].clientY;
                     } else if (this.touchState.pinching && e.touches.length === 2) {
-                        // Escalar
                         const dx = e.touches[0].clientX - e.touches[1].clientX;
                         const dy = e.touches[0].clientY - e.touches[1].clientY;
                         const currentDist = Math.sqrt(dx * dx + dy * dy);
                         const scaleFactor = currentDist / this.touchState.startDist;
                         this.boardContainer.object3D.scale.copy(this.touchState.initialScale).multiplyScalar(scaleFactor);
 
-                        // Rotar
                         const currentAngle = Math.atan2(dy, dx);
                         const angleDelta = currentAngle - this.touchState.startAngle;
                         this.boardContainer.object3D.rotation.y = this.touchState.initialRotation.y + angleDelta;
@@ -647,10 +677,5 @@
     </script>
 </body>
 </html>
-
-
-
-
-
 
 
