@@ -6,9 +6,12 @@
     <title>Ajedrez AR (Sin Marcadores)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <!-- CAMBIO: Se ha eliminado la librería de MindAR. Ahora usaremos WebXR nativo de A-Frame -->
     <style>
-        /* Estilos generales y para el modo AR */
+        /* Estilos generales */
+        body {
+            overscroll-behavior: none; /* Previene "pull-to-refresh" */
+        }
+        /* MEJORA: Se permite el scroll por defecto y se restringe solo en modo AR */
         html.ar-active, body.ar-active {
             overflow: hidden;
             width: 100%;
@@ -20,7 +23,9 @@
             display: none;
             position: absolute;
             top: 0; left: 0;
-            width: 100%; height: 100%;
+            width: 100%;
+            min-height: 100%; /* Permite que el contenido crezca */
+            overflow-y: auto; /* Permite scroll vertical si es necesario */
             transition: opacity 0.5s ease-in-out;
             z-index: 10;
         }
@@ -75,7 +80,7 @@
         #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
-<body class="bg-stone-900 text-white overflow-hidden">
+<body class="bg-stone-900 text-white">
     <div id="app-version" class="version"></div>
     <div id="game-status" class="game-status"></div>
 
@@ -149,13 +154,14 @@
         <button id="back-to-board-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
-    <!-- CAMBIO: Pantalla de instrucciones adaptada para AR sin marcadores -->
+    <!-- Pantalla de instrucciones para AR sin marcadores -->
     <div id="instructions-screen" class="screen flex-col justify-center items-center text-center p-8 bg-stone-800">
         <h2 class="text-4xl font-bold mb-4 text-amber-300">Prepara tu Espacio de Juego</h2>
         <p class="text-stone-300 max-w-xl mb-6">La Realidad Aumentada necesita detectar una superficie plana y bien iluminada.</p>
         <div class="text-6xl mb-4">📱</div>
         <p class="text-stone-300 max-w-xl mb-8">Apunta con tu cámara a una mesa o al suelo, muévela lentamente hasta que veas un retículo, y luego toca la pantalla para colocar el tablero.</p>
-        <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Iniciar AR</button>
+        <!-- MEJORA: Se cambia el texto del botón -->
+        <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Iniciar Juego</button>
         <button id="back-to-mode-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
@@ -170,19 +176,19 @@
         </div>
     </div>
     
-    <!-- Overlays de Carga -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 text-amber-200 flex flex-col items-center justify-center" style="display: none; z-index: 50;">
+    <!-- MEJORA: Overlay de carga más profesional -->
+    <div id="loading-overlay" class="fixed inset-0 bg-stone-900 bg-opacity-95 text-amber-200 flex flex-col items-center justify-center" style="display: none; z-index: 50;">
         <div class="loader mb-4"></div>
-        <p id="loading-message" class="text-lg">Cargando...</p>
+        <p id="loading-message" class="text-lg text-white">Cargando...</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.0.0"; // Versión mayor por cambio a WebXR
+            const APP_VERSION = "2.1.0"; // Versión por mejoras de UX y AR
 
             let game = new Chess();
-            let gameState = 'IDLE'; // IDLE, PIECE_SELECTED, BOARD_PLACED
+            let gameState = 'IDLE';
             let selectedPieceEntity = null;
             let legalMoveEntities = [];
             let playerColor = 'w';
@@ -235,7 +241,10 @@
             function navigateTo(screenName) {
                 if (sceneEl) {
                     sceneEl.pause();
-                    if (sceneEl.xrSession) sceneEl.xrSession.end();
+                    // MEJORA: Asegurarse de terminar la sesión XR al salir
+                    if (sceneEl.is('vr-mode')) {
+                        sceneEl.exitVR();
+                    }
                     arContainer.innerHTML = '';
                     sceneEl = null;
                 }
@@ -253,7 +262,6 @@
                 buttons.continueSet.disabled = false;
             }));
             buttons.continueSet.addEventListener('click', () => navigateTo('boardSelection'));
-            // ... (resto de la navegación similar) ...
             buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
             buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
             buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
@@ -282,9 +290,9 @@
             buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
             buttons.startAR.addEventListener('click', async () => {
                 navigateTo('ar');
-                showLoading(true, "Cargando recursos...");
+                showLoading(true, "Cargando recursos del juego...");
                 await preloadARAssets();
-                showLoading(false);
+                showLoading(true, "Preparando la experiencia AR...");
                 setupARScene();
             });
 
@@ -295,13 +303,16 @@
 
             async function preloadARAssets() { /* ... (sin cambios) ... */ }
 
-            // ---- CAMBIO: Lógica de AR completamente reescrita para WebXR ----
+            // ---- Lógica de AR con WebXR ----
             function setupARScene() {
                 document.documentElement.classList.add('ar-active');
                 document.body.classList.add('ar-active');
                 boardPlaced = false;
 
                 sceneEl = document.createElement('a-scene');
+                // MEJORA: Se habilita la UI nativa de A-Frame para entrar a AR
+                // Esto es crucial para que el navegador pida los permisos correctamente.
+                sceneEl.setAttribute('vr-mode-ui', 'enabled: true; enterARButtonSelector: #enter-ar-btn-placeholder');
                 sceneEl.setAttribute('webxr', 'requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay');
                 
                 // Assets
@@ -319,20 +330,13 @@
                 }
                 sceneEl.appendChild(assetsEl);
 
-                // Cámara y luces
                 const cameraEl = document.createElement('a-camera');
                 sceneEl.appendChild(cameraEl);
-                const light1 = document.createElement('a-light');
-                light1.setAttribute('type', 'ambient');
-                light1.setAttribute('color', '#888');
+                const light1 = document.createElement('a-light', {type: 'ambient', color: '#888'});
                 sceneEl.appendChild(light1);
-                const light2 = document.createElement('a-light');
-                light2.setAttribute('type', 'directional');
-                light2.setAttribute('position', '-1 1 1');
-                light2.setAttribute('intensity', '0.6');
+                const light2 = document.createElement('a-light', {type: 'directional', position: '-1 1 1', intensity: '0.6'});
                 sceneEl.appendChild(light2);
 
-                // Contenedor del tablero (inicialmente invisible)
                 const boardContainer = document.createElement('a-entity');
                 boardContainer.setAttribute('id', 'board-container');
                 boardContainer.setAttribute('visible', 'false');
@@ -340,7 +344,6 @@
                 renderBoardFromFen(boardContainer);
                 sceneEl.appendChild(boardContainer);
 
-                // Retículo de posicionamiento
                 const reticle = document.createElement('a-ring');
                 reticle.setAttribute('id', 'reticle');
                 reticle.setAttribute('ar-hit-test', 'target: #board-container; type: plane');
@@ -349,53 +352,66 @@
                 reticle.setAttribute('color', 'cyan');
                 reticle.setAttribute('visible', 'false');
                 sceneEl.appendChild(reticle);
-
+                
                 arContainer.appendChild(sceneEl);
 
                 sceneEl.addEventListener('loaded', () => {
-                    arInstructionsUI.classList.remove('hidden');
-                    buttons.exitAR.style.display = 'block';
+                    showLoading(false); // Ocultar "Preparando..."
+                    // A-Frame ahora mostrará su propio botón "ENTER AR"
                 });
 
-                // Lógica de posicionamiento
-                reticle.addEventListener('ar-hit-test-start', () => {
-                    arInstructionsText.textContent = "Mueve tu dispositivo para encontrar una superficie.";
-                });
                 reticle.addEventListener('ar-hit-test-achieved', () => {
                     reticle.setAttribute('visible', 'true');
-                    arInstructionsText.textContent = "Toca la pantalla para colocar el tablero.";
+                    if (!boardPlaced) arInstructionsText.textContent = "Toca la pantalla para colocar el tablero.";
                 });
-                reticle.addEventListener('ar-hit-test-lost', () => {
-                    reticle.setAttribute('visible', 'false');
-                });
+                reticle.addEventListener('ar-hit-test-lost', () => reticle.setAttribute('visible', 'false'));
 
                 sceneEl.addEventListener('enter-vr', () => {
                     if (sceneEl.is('ar-mode')) {
-                        reticle.addEventListener('select', () => {
-                            if (!boardPlaced) {
+                        arInstructionsUI.classList.remove('hidden');
+                        buttons.exitAR.style.display = 'block';
+                        
+                        // Solo escuchamos el evento 'select' (toque en pantalla) una vez para colocar el tablero
+                        const placeBoard = () => {
+                            if (!boardPlaced && reticle.getAttribute('visible')) {
                                 boardContainer.setAttribute('visible', 'true');
-                                reticle.setAttribute('visible', 'false'); // Ocultar retículo
-                                reticle.removeAttribute('ar-hit-test'); // Desactivar hit-test
+                                reticle.setAttribute('visible', 'false');
+                                reticle.removeAttribute('ar-hit-test');
                                 boardPlaced = true;
                                 arInstructionsUI.classList.add('hidden');
                                 gameStatusEl.style.display = 'block';
                                 updateGameStatus();
+                                sceneEl.removeEventListener('select', placeBoard); // Dejamos de escuchar para no colocar más tableros
                             }
-                        });
+                        };
+                        sceneEl.addEventListener('select', placeBoard);
                     }
                 });
+                 sceneEl.addEventListener('exit-vr', () => navigateTo('gameMode'));
 
                 sceneEl.addEventListener('click', (evt) => {
                     if (boardPlaced) handleGameClick(evt);
                 });
             }
 
-            function create3DBoard(parent) {
+            function create3DBoard(parent) { /* ... (sin cambios) ... */ }
+            function renderBoardFromFen(parent) { /* ... (sin cambios) ... */ }
+            function handleGameClick(evt) { /* ... (lógica de click sin cambios) ... */ }
+            function selectPiece(entity) { /* ... (lógica de selección sin cambios) ... */ }
+            function clearLegalMoves() { /* ... (lógica de limpiar movimientos sin cambios) ... */ }
+            function movePiece() { /* ... (lógica de mover pieza sin cambios) ... */ }
+            function makeAIMove() { /* ... (lógica de IA sin cambios) ... */ }
+            function updateGameStatus() { /* ... (lógica de estado sin cambios) ... */ }
+            function squareToPosition(square) { /* ... (lógica de posición sin cambios) ... */ }
+            function getPrimitive(type, color) { /* ... (lógica de primitivas sin cambios) ... */ }
+
+            // --- Se re-añaden las funciones de lógica del juego para mantener la funcionalidad ---
+            
+             function create3DBoard(parent) {
                 const boardSize = 0.6; // Tamaño ajustado para superficies de mesa
                 const squareSize = boardSize / 8;
                 const boardGroup = document.createElement('a-entity');
                 boardGroup.setAttribute('id', 'board-group');
-                
                 const boardBase = document.createElement('a-box');
                 boardBase.setAttribute('width', boardSize + 0.04);
                 boardBase.setAttribute('height', 0.02);
@@ -403,14 +419,12 @@
                 boardBase.setAttribute('color', '#4a2a15');
                 boardBase.setAttribute('position', `0 -0.01 0`);
                 boardGroup.appendChild(boardBase);
-
                 for(let i = 0; i < 8; i++) {
                     for(let j = 0; j < 8; j++) {
                         const squareEl = document.createElement('a-plane');
                         squareEl.setAttribute('width', squareSize);
                         squareEl.setAttribute('height', squareSize);
-                        const color = (i + j) % 2 === 0 ? '#D18B47' : '#FFCE9E';
-                        squareEl.setAttribute('color', color);
+                        squareEl.setAttribute('color', (i + j) % 2 === 0 ? '#D18B47' : '#FFCE9E');
                         const x = -boardSize/2 + squareSize/2 + j * squareSize;
                         const z = -boardSize/2 + squareSize/2 + i * squareSize;
                         squareEl.setAttribute('position', `${x} 0.001 ${z}`);
@@ -428,15 +442,12 @@
                 const boardSize = 0.6;
                 const squareSize = boardSize / 8;
                 const offset = -boardSize/2 + squareSize/2;
-                
                 game.board().forEach((row, i) => {
                     row.forEach((piece, j) => {
                         if (!piece) return;
-                        
                         const pieceEl = document.createElement('a-entity');
                         pieceEl.classList.add('chess-piece');
                         pieceEl.dataset.square = piece.square;
-
                         if (assetMap[selectedSet]?.[piece.color]?.[piece.type]) {
                             const modelData = assetMap[selectedSet][piece.color][piece.type];
                             pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
@@ -447,7 +458,6 @@
                             pieceEl.setAttribute('geometry', primitive.geometry);
                             pieceEl.setAttribute('material', `color: ${primitive.color}`);
                         }
-                        
                         const x = offset + j * squareSize;
                         const z = offset + i * squareSize;
                         pieceEl.setAttribute('position', `${x} 0.02 ${z}`);
@@ -456,23 +466,6 @@
                 });
             }
 
-            function handleGameClick(evt) { /* ... (lógica de click sin cambios) ... */ }
-            function selectPiece(entity) { /* ... (lógica de selección sin cambios) ... */ }
-            function clearLegalMoves() { /* ... (lógica de limpiar movimientos sin cambios) ... */ }
-            function movePiece() { /* ... (lógica de mover pieza sin cambios) ... */ }
-            function makeAIMove() { /* ... (lógica de IA sin cambios) ... */ }
-            function updateGameStatus() { /* ... (lógica de estado sin cambios) ... */ }
-            function squareToPosition(square) {
-                 const boardSize = 0.6;
-                 const squareSize = boardSize / 8;
-                 const offset = -boardSize/2 + squareSize/2;
-                 const col = 'abcdefgh'.indexOf(square[0]);
-                 const row = 8 - parseInt(square[1]);
-                 return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
-            }
-            function getPrimitive(type, color) { /* ... (lógica de primitivas sin cambios) ... */ }
-
-            // Re-añadir lógicas que se omitieron para brevedad
             function handleGameClick(evt) {
                 if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
                 const clickedEl = evt.target.closest('.chess-piece, .clickable-square, .legal-move-marker');
@@ -481,7 +474,6 @@
                      gameState = 'IDLE';
                      return;
                 }
-                
                 if (gameState === 'IDLE') {
                     if (clickedEl.classList.contains('chess-piece')) {
                         const square = clickedEl.dataset.square;
@@ -515,7 +507,6 @@
                 clearLegalMoves();
                 selectedPieceEntity = entity;
                 gameState = 'PIECE_SELECTED';
-                
                 const moves = game.moves({ square: entity.dataset.square, verbose: true });
                 moves.forEach(move => {
                     const pos = squareToPosition(move.to);
@@ -566,6 +557,15 @@
                     if (game.in_check()) status += ' - ¡Jaque!';
                 }
                 gameStatusEl.textContent = status;
+            }
+
+             function squareToPosition(square) {
+                 const boardSize = 0.6;
+                 const squareSize = boardSize / 8;
+                 const offset = -boardSize/2 + squareSize/2;
+                 const col = 'abcdefgh'.indexOf(square[0]);
+                 const row = 8 - parseInt(square[1]);
+                 return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
             }
 
             function getPrimitive(type, color) {
