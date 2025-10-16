@@ -21,93 +21,26 @@
         #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
         
         /* --- ESTILOS MEJORADOS PARA LA PANTALLA DE CARGA --- */
-        #initial-loading-screen {
+        #initial-loading-screen, #ar-entry-loading-screen {
             background: radial-gradient(circle, #282142 0%, #1c1917 100%);
             overflow: hidden; /* Para contener las partículas */
         }
         #loading-content {
             z-index: 2; /* Asegura que el contenido esté sobre las partículas */
         }
-        #piece-loader {
-            position: relative;
-            width: 90px;
-            height: 90px;
-        }
-        #piece-loader svg {
-            width: 100%;
-            height: 100%;
-            fill: #fde047;
-            filter: drop-shadow(0 0 10px #facc15);
-            position: absolute;
-            top: 0;
-            left: 0;
-            opacity: 0;
-            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
-            transform: scale(0.8);
-        }
-        #piece-loader svg.active {
-            opacity: 1;
-            transform: scale(1);
-        }
-        #magic-progress-container {
-            width: 100%;
-            background-color: #4a2a15;
-            border-radius: 20px;
-            border: 3px solid #6b4629;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
-            padding: 4px;
-        }
-        #loading-progress-bar {
-            background: linear-gradient(90deg, #facc15 0%, #fde047 100%);
-            box-shadow: 0 0 8px #facc15, 0 0 15px #fde047;
-            border-radius: 12px;
-            position: relative;
-            transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1);
-        }
-        #loading-progress-bar::after {
-            content: '';
-            position: absolute;
-            right: -8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        #initial-loading-screen.is-loading #loading-progress-bar::after {
-            opacity: 1;
-        }
+        #piece-loader { position: relative; width: 90px; height: 90px; }
+        #piece-loader svg { width: 100%; height: 100%; fill: #fde047; filter: drop-shadow(0 0 10px #facc15); position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out; transform: scale(0.8); }
+        #piece-loader svg.active { opacity: 1; transform: scale(1); }
+        .magic-progress-container { width: 100%; background-color: #4a2a15; border-radius: 20px; border: 3px solid #6b4629; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); padding: 4px; }
+        .loading-progress-bar { background: linear-gradient(90deg, #facc15 0%, #fde047 100%); box-shadow: 0 0 8px #facc15, 0 0 15px #fde047; border-radius: 12px; position: relative; transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1); }
+        .loading-progress-bar::after { content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; background: white; border-radius: 50%; box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; opacity: 1; transition: opacity 0.3s; }
 
         /* Partículas Mágicas */
-        .particle {
-            position: absolute;
-            background: #fde047;
-            border-radius: 50%;
-            opacity: 0;
-            animation: rise 10s infinite linear;
-            box-shadow: 0 0 5px #fde047, 0 0 10px #facc15;
-        }
-        @keyframes rise {
-            0% { transform: translateY(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
-        }
-        /* --- FIN DE ESTILOS DE CARGA --- */
+        .particle { position: absolute; background: #fde047; border-radius: 50%; opacity: 0; animation: rise 10s infinite linear; box-shadow: 0 0 5px #fde047, 0 0 10px #facc15; }
+        @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; } }
         
-        .a-enter-vr-button {
-            position: fixed !important; bottom: 20px !important; left: 50% !important;
-            transform: translateX(-50%) !important; background-color: #10B991 !important;
-            color: white !important; border: none !important; border-radius: 9999px !important;
-            padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
-        }
-        #ar-entry-loading-screen { background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)); z-index: 9990; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .a-enter-vr-button { position: fixed !important; bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important; background-color: #10B991 !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.95); } }
         .pulsing-icon { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
@@ -126,12 +59,10 @@
         <div id="particle-container"></div>
         <div id="loading-content" class="w-full max-w-lg">
             <h2 id="loading-title" class="text-4xl font-bold mb-6 text-amber-300 drop-shadow-lg">Preparando el Campo de Batalla</h2>
-            <div id="piece-loader" class="mb-6 h-24 mx-auto">
-                <!-- Los SVGs se insertarán aquí con JS -->
-            </div>
+            <div id="piece-loader" class="mb-6 h-24 mx-auto"></div>
             <p id="loading-text" class="text-center text-stone-300 mt-2 text-lg mb-4">Forjando nuevos artefactos mágicos...</p>
-            <div id="magic-progress-container">
-                <div id="loading-progress-bar" class="h-full" style="width: 0%; height: 16px;"></div>
+            <div class="magic-progress-container">
+                <div id="initial-loading-progress-bar" class="loading-progress-bar" style="width: 0%; height: 16px;"></div>
             </div>
         </div>
     </div>
@@ -178,12 +109,15 @@
         <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Entrar al Portal</button>
         <button id="back-to-mode-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
-
+    
     <div id="ar-entry-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
-        <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Abriendo el Portal...</h2>
-        <div class="text-8xl mb-6 pulsing-icon">♖</div>
-        <p id="ar-loading-status-text" class="text-stone-300 max-w-xl">Cargando artefactos mágicos, por favor espera...</p>
+        <div class="w-full max-w-lg z-10">
+            <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Iniciando Cámara...</h2>
+            <div class="text-8xl text-amber-300 mb-6 pulsing-icon" style="filter: drop-shadow(0 0 10px #facc15);">♔</div>
+            <p id="ar-loading-status-text" class="text-stone-300 max-w-xl mb-6">Alineando el plano astral, por favor espera.</p>
+        </div>
     </div>
+
 
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
         <div id="ar-container"></div>
@@ -198,7 +132,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.4.0"; // Versión con inicialización AR robusta
+            const APP_VERSION = "3.7.0"; // Versión con Precarga de Activos
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
             // --- Estado del juego y variables globales ---
@@ -242,19 +176,13 @@
                     w: { p: { url: `${GITHUB_BASE_URL}Pawn_Gryffindor.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02' }, k: { url: `${GITHUB_BASE_URL}King_Dumbledore.glb`, scale: '0.02 0.02 0.02' } },
                     b: { p: { url: `${GITHUB_BASE_URL}Pawn_Sytherin.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby2.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter_Hollow.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: `${GITHUB_BASE_URL}King_Voldemort.glb`, scale: '0.02 0.02 0.02' } }
                 },
-                'futuristic': { // Placeholder for futuristic set
-                    w: { p: { url: ``, scale: '0.1 0.1 0.1' } },
-                    b: { p: { url: ``, scale: '0.1 0.1 0.1' } }
-                }
+                'futuristic': { w: { p: { url: ``, scale: '0.1 0.1 0.1' } }, b: { p: { url: ``, scale: '0.1 0.1 0.1' } } }
             };
 
-            // --- Navegación ---
             function navigateTo(screenName) {
                 if (screenName !== 'ar') {
                     if (sceneEl && sceneEl.parentNode) {
-                        if (sceneEl.is('ar-mode')) {
-                            sceneEl.exitVR();
-                        }
+                        if (sceneEl.is('ar-mode')) sceneEl.exitVR();
                         sceneEl.parentNode.removeChild(sceneEl);
                         sceneEl = null;
                     }
@@ -262,64 +190,108 @@
                 Object.values(screens).forEach(s => s.classList.remove('active'));
                 screens[screenName].classList.add('active');
             }
-
-            // --- Lógica de la interfaz de usuario ---
-            buttons.start.addEventListener('click', () => {
+            
+            // --- ✅ LÓGICA DE PRECARGA DE ACTIVOS ---
+            function preloadAllAssets() {
                 navigateTo('initialLoading');
-                initializeLoadingScreen();
-                setTimeout(() => navigateTo('selection'), 1500);
+                initializeLoadingScreenVisuals();
+
+                const progressBar = document.getElementById('initial-loading-progress-bar');
+                const loadingText = document.getElementById('loading-text');
+
+                // 1. Crear una escena y assets temporales para iniciar la descarga
+                const tempScene = document.createElement('a-scene');
+                tempScene.style.cssText = 'position: absolute; height: 1px; width: 1px; left: -9999px; top: -9999px;';
+                const assetsEl = document.createElement('a-assets');
+                assetsEl.setAttribute('timeout', '60000');
+
+                // 2. Obtener TODAS las URLs de los modelos
+                const allAssetUrls = new Set();
+                Object.values(assetMap).forEach(pieceSet => {
+                    Object.values(pieceSet.w).forEach(p => p.url && allAssetUrls.add(p.url));
+                    Object.values(pieceSet.b).forEach(p => p.url && allAssetUrls.add(p.url));
+                });
+                
+                if (allAssetUrls.size === 0) {
+                    loadingText.textContent = "¡Arsenal listo! No hay artefactos que forjar.";
+                    setTimeout(() => navigateTo('selection'), 1000);
+                    return;
+                }
+
+                let assetsContent = Array.from(allAssetUrls).map(url => `<a-asset-item id="preload-${url}" src="${url}"></a-asset-item>`).join('');
+                assetsEl.innerHTML = assetsContent;
+                tempScene.appendChild(assetsEl);
+                document.body.appendChild(tempScene);
+
+                // 3. Monitorear el progreso de la descarga
+                assetsEl.addEventListener('progress', (event) => {
+                    const progress = event.detail.progress * 100;
+                    if (!isNaN(progress)) { // Corregir el bug de NaN%
+                        progressBar.style.width = `${progress}%`;
+                        loadingText.textContent = `Forjando artefactos mágicos... (${Math.round(progress)}%)`;
+                    }
+                });
+
+                assetsEl.addEventListener('loaded', () => {
+                    loadingText.textContent = "¡Arsenal mágico listo!";
+                    setTimeout(() => {
+                        document.body.removeChild(tempScene); // Limpiar la escena temporal
+                        navigateTo('selection');
+                    }, 500);
+                });
+
+                assetsEl.addEventListener('timeout', () => {
+                    loadingText.textContent = "Error: La forja mágica falló. Revisa tu conexión.";
+                });
+            }
+
+            buttons.start.addEventListener('click', () => {
+                preloadAllAssets(); // Iniciar la precarga al principio
             });
 
-            document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
+            // --- Lógica de UI (sin cambios mayores) ---
+            document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', e => {
                 document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
                 selectedSet = e.currentTarget.dataset.set;
                 buttons.continueSet.disabled = false;
             }));
             buttons.continueSet.addEventListener('click', () => navigateTo('boardSelection'));
-
-            document.querySelectorAll('.board-card').forEach(card => card.addEventListener('click', (e) => {
+            document.querySelectorAll('.board-card').forEach(card => card.addEventListener('click', e => {
                 document.querySelectorAll('.board-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
                 selectedBoard = e.currentTarget.dataset.board;
                 if (playerColor) buttons.continueBoard.disabled = false;
             }));
-            document.querySelectorAll('.color-swatch').forEach(swatch => swatch.addEventListener('click', (e) => {
+            document.querySelectorAll('.color-swatch').forEach(swatch => swatch.addEventListener('click', e => {
                 document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
                 playerColor = e.currentTarget.dataset.color;
                 if (selectedBoard) buttons.continueBoard.disabled = false;
             }));
             buttons.continueBoard.addEventListener('click', () => navigateTo('gameMode'));
-
-            document.querySelectorAll('.mode-card').forEach(card => card.addEventListener('click', (e) => {
+            document.querySelectorAll('.mode-card').forEach(card => card.addEventListener('click', e => {
                 document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
                 gameMode = e.currentTarget.dataset.mode;
                 buttons.startGame.disabled = false;
             }));
             buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
-            
             buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
             buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
             buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
-            
             buttons.exitAR.addEventListener('click', () => {
-                if (sceneEl && sceneEl.is('ar-mode')) {
-                    sceneEl.exitVR(); 
-                } else {
-                    navigateTo('gameMode');
-                }
+                if (sceneEl && sceneEl.is('ar-mode')) sceneEl.exitVR();
+                else navigateTo('gameMode');
             });
-
+            
+            // --- El botón de AR ahora solo configura la escena (ya todo está cargado) ---
             buttons.startAR.addEventListener('click', () => {
-                navigateTo('arEntryLoading');
                 setupARScene();
             });
 
-            // --- LÓGICA DE REALIDAD AUMENTADA (CORREGIDA Y ROBUSTA) ---
-
             function setupARScene() {
+                navigateTo('arEntryLoading');
                 const arContainer = document.getElementById('ar-container');
                 arContainer.innerHTML = ''; 
 
@@ -329,27 +301,20 @@
                     Object.values(assetMap[selectedSet].b).forEach(p => p.url && assetUrls.add(p.url));
                 }
                 
-                let assetsContent = Array.from(assetUrls).map(url => 
-                    `<a-asset-item id="${url}" src="${url}" response-type="arraybuffer" crossorigin="anonymous"></a-asset-item>`
-                ).join('');
+                let assetsContent = Array.from(assetUrls).map(url => `<a-asset-item id="${url}" src="${url}"></a-asset-item>`).join('');
 
-                // ✅ LA CORRECCIÓN CLAVE ESTÁ AQUÍ:
-                // Se cambiaron 'requiredFeatures' a 'optionalFeatures' para máxima compatibilidad.
-                // Esto evita que la sesión de AR falle si el dispositivo no soporta una función específica,
-                // permitiendo que la cámara se abra correctamente.
                 const sceneHTML = `
                     <a-scene id="ar-scene" 
                         vr-mode-ui="enabled: false;" 
                         webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #ar-ui-overlay;" 
                         renderer="colorManagement: true; physicallyCorrectLights: true;"
                         ar-logic>
-                        <a-assets timeout="45000">${assetsContent}</a-assets>
+                        <a-assets timeout="10000">${assetsContent}</a-assets>
                         <a-camera></a-camera>
-                        <a-light type="ambient" color="#FFF" intensity="0.7"></a-light>
-                        <a-light type="directional" position="-1 2 1" intensity="0.8"></a-light>
+                        <a-light type="ambient" color="#FFF" intensity="1.2"></a-light>
+                        <a-light type="directional" position="-1 2 1" intensity="1.0"></a-light>
                         <a-entity id="board-container" visible="false"></a-entity>
                         <a-entity id="reticle" 
-                            ar-hit-test
                             geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" 
                             material="color: #FBBF24; shader: flat;" 
                             visible="false">
@@ -361,98 +326,90 @@
                 
                 setTimeout(() => {
                     sceneEl = document.getElementById('ar-scene');
+                    if (!sceneEl) { return; }
                     
-                    if (sceneEl) {
-                        sceneEl.addEventListener('loaded', () => {
-                            console.log("A-Frame SCENE is fully loaded. It is now safe to interact with.");
-                            navigateTo('ar');
-                            document.getElementById('ar-loading-status-text').textContent = "¡Portal listo! Presiona el botón para invocar.";
-                            
-                            sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
-                            sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
-                        });
-
-                        const assetsEl = sceneEl.querySelector('a-assets');
-                        if (assetsEl) {
-                                assetsEl.addEventListener('timeout', () => {
-                                    console.error("Asset loading timed out.");
-                                    document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
-                                });
-                        }
-
-                    } else {
-                        console.error("Fatal Error: Could not find the A-Frame scene element after creation.");
-                        document.getElementById('ar-loading-status-text').textContent = "Error fatal al crear la escena AR.";
-                    }
-                }, 0); 
+                    sceneEl.addEventListener('loaded', () => {
+                        navigateTo('ar');
+                        sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
+                        sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
+                    });
+                }, 100); 
             }
-
+            
             AFRAME.registerComponent('ar-logic', {
-                init: function() {
+                 init: function() {
                     this.reticle = document.querySelector('#reticle');
                     this.boardContainer = document.querySelector('#board-container');
-                    
+                    this.hitTestSource = null;
                     this.onEnterVR = this.onEnterVR.bind(this);
                     this.onExitVR = this.onExitVR.bind(this);
                     this.onSelect = this.onSelect.bind(this);
-                    this.handleGameClick = this.handleGameClick.bind(this);
-
                     this.el.sceneEl.addEventListener('enter-vr', this.onEnterVR);
                     this.el.sceneEl.addEventListener('exit-vr', this.onExitVR);
-                    this.el.sceneEl.addEventListener('select', this.onSelect); 
-                    this.el.sceneEl.addEventListener('click', this.handleGameClick);
+                    this.el.sceneEl.addEventListener('click', this.handleGameClick.bind(this));
                 },
-                onEnterVR: function() {
+                tick: function() {
+                    if (!this.el.sceneEl.is('ar-mode') || !this.hitTestSource || boardPlaced) return;
+                    const frame = this.el.sceneEl.renderer.xr.getFrame();
+                    if (!frame) return;
+                    const hitTestResults = frame.getHitTestResults(this.hitTestSource);
+                    if (hitTestResults.length > 0) {
+                        const hit = hitTestResults[0];
+                        const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
+                        const pose = hit.getPose(referenceSpace);
+                        this.reticle.setAttribute('visible', 'true');
+                        this.reticle.object3D.position.copy(pose.transform.position);
+                        this.reticle.object3D.quaternion.copy(pose.transform.quaternion);
+                    } else {
+                        this.reticle.setAttribute('visible', 'false');
+                    }
+                },
+                onEnterVR: async function() {
                     if (this.el.sceneEl.is('ar-mode')) {
-                        console.log("AR session started successfully.");
                         document.getElementById('ar-instructions-ui').classList.remove('hidden');
                         buttons.exitAR.style.display = 'block';
                         boardPlaced = false;
                         game.reset();
-                        this.reticle.setAttribute('visible', 'true');
                         this.boardContainer.setAttribute('visible', 'false');
-                        this.boardContainer.innerHTML = ''; // Limpiar tablero anterior
+                        this.boardContainer.innerHTML = '';
+                        try {
+                            const session = this.el.sceneEl.renderer.xr.getSession();
+                            session.addEventListener('select', this.onSelect); 
+                            const viewerReferenceSpace = await session.requestReferenceSpace('viewer');
+                            this.hitTestSource = await session.requestHitTestSource({ space: viewerReferenceSpace });
+                        } catch (e) { this.hitTestSource = null; }
                     }
                 },
                 onExitVR: function() {
+                    if (this.hitTestSource) this.hitTestSource = null;
+                    const session = this.el.sceneEl.renderer.xr.getSession();
+                    if(session) session.removeEventListener('select', this.onSelect);
                     navigateTo('gameMode');
                 },
                 onSelect: function() {
                     if (!boardPlaced && this.reticle.getAttribute('visible')) {
-                        this.reticle.object3D.updateWorldMatrix(true, false);
-                        const position = this.reticle.object3D.position;
-                        
-                        this.boardContainer.setAttribute('position', position);
+                        this.boardContainer.setAttribute('position', this.reticle.object3D.position);
                         this.boardContainer.setAttribute('visible', 'true');
                         this.reticle.setAttribute('visible', 'false');
                         boardPlaced = true;
-                        
                         document.getElementById('ar-instructions-ui').classList.add('hidden');
                         document.getElementById('game-status').style.display = 'block';
-                        
                         create3DBoard(this.boardContainer);
                         renderBoardFromFen(this.boardContainer);
                         updateGameStatus();
+                        this.hitTestSource = null; 
                     }
                 },
-                handleGameClick: function(evt) {
-                    if (boardPlaced) {
-                        handleGameClick(evt);
-                    }
-                }
+                handleGameClick: function(evt) { if (boardPlaced) handleGameClick(evt); }
             });
 
-            // --- Lógica del juego de ajedrez (sin cambios) ---
-            function initializeLoadingScreen() {
+            // --- Lógica de juego y UI (mayormente sin cambios) ---
+            function initializeLoadingScreenVisuals() {
                 const pieceLoader = document.getElementById('piece-loader');
-                const particleContainer = document.getElementById('particle-container');
                 pieceLoader.innerHTML = '';
-                particleContainer.innerHTML = '';
                 const pieces = [
                     `<svg data-piece="king" viewBox="0 0 45 45"><path d="M22.5 11.63V6M20 8h5M22.5 25s4.5-7.5 3-10.5c0 0-1.5-3-3-3s-3 3-3 3c-1.5 3 3 10.5 3 10.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path></svg>`,
                     `<svg data-piece="queen" viewBox="0 0 45 45"><path d="M9 13.5s1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5 3.5 4.5 3.5 4.5 1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke="#FFF"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path><circle cx="6" cy="12" r="1.2" fill="#FFF"></circle><circle cx="12.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="19.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="26.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="33" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="39" cy="12" r="1.2" fill="#FFF"></circle></svg>`,
-                    `<svg data-piece="rook" viewBox="0 0 45 45"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM12 15V9h7.5v6H12zM19.5 15V9h6v6h-6zM25.5 15V9H33v6h-7.5zM9 15h3v18H9V15zM33 15h3v18h-3V15z" stroke="#FFF" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFF"></path></svg>`,
-                    `<svg data-piece="knight" viewBox="0 0 45 45"><path d="M22 10c10.5 1 16.5 8 16 29H15c-2.5-4-3-7.5-1-11.5 3-7 12-10 12-10s-4 1-6 4s-3 6-2.5 8.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M24 18c.5-2.5 2.5-5 4.5-5.5s4.5-1.5 4.5-1.5s-2 .5-4 2.5s-2 4.5-2.5 6.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><circle cx="26" cy="14" r="2" fill="#FFF"></circle></svg>`
                 ];
                 pieceLoader.innerHTML = pieces.join('');
                 let currentPiece = 0;
@@ -463,18 +420,7 @@
                     currentPiece = (currentPiece + 1) % pieceElements.length;
                     pieceElements[currentPiece].classList.add('active');
                 }, 2000);
-                for (let i = 0; i < 25; i++) {
-                    const p = document.createElement('div');
-                    p.className = 'particle';
-                    p.style.left = `${Math.random() * 100}%`;
-                    p.style.top = `${Math.random() * 100}%`;
-                    const size = Math.random() * 8 + 2;
-                    p.style.width = `${size}px`; p.style.height = `${size}px`;
-                    p.style.animationDelay = `${Math.random() * 10}s`;
-                    particleContainer.appendChild(p);
-                }
             }
-
             function create3DBoard(parent) {
                 const boardSize = 0.6; const squareSize = boardSize / 8;
                 const boardGroup = document.createElement('a-entity');
@@ -500,7 +446,6 @@
                 }
                 parent.appendChild(boardGroup);
             }
-            
             function renderBoardFromFen(parent) {
                 const boardGroup = parent.querySelector('#board-group') || parent;
                 boardGroup.querySelectorAll('.chess-piece').forEach(el => el.remove());
@@ -519,52 +464,37 @@
                             if(modelData.rotation) pieceEl.setAttribute('rotation', modelData.rotation);
                         }
                         const x = offset + j * squareSize;
-                        const z = offset + (7-i) * squareSize; // Correct board orientation
+                        const z = offset + (7-i) * squareSize;
                         pieceEl.setAttribute('position', `${x} 0.01 ${z}`);
                         boardGroup.appendChild(pieceEl);
                     });
                 });
             }
-
             function handleGameClick(evt) {
                 if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
                 const clickedEl = evt.target.closest('.chess-piece, .clickable-square, .legal-move-marker');
                 if (!clickedEl) { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; return; }
-                
                 if (gameState === 'IDLE') {
                     if (clickedEl.classList.contains('chess-piece')) {
                         const square = clickedEl.dataset.square;
                         const piece = game.get(square);
-                        if (piece && piece.color === game.turn()) {
-                            selectPiece(clickedEl);
-                        }
+                        if (piece && piece.color === game.turn()) selectPiece(clickedEl);
                     }
                 } else if (gameState === 'PIECE_SELECTED') {
                     const toSquare = clickedEl.dataset.square;
                     if (toSquare) {
                         const fromSquare = selectedPieceEntity.dataset.square;
                         const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' });
-                        if (move) {
-                            movePiece();
-                        } else {
+                        if (move) movePiece();
+                        else {
                             const pieceOnTarget = game.get(toSquare);
                             const targetEntity = document.querySelector(`.chess-piece[data-square="${toSquare}"]`);
-                            if (pieceOnTarget && targetEntity && pieceOnTarget.color === game.turn()) {
-                                selectPiece(targetEntity);
-                            } else { 
-                                clearLegalMoves(); 
-                                gameState = 'IDLE'; 
-                                selectedPieceEntity = null;
-                            }
+                            if (pieceOnTarget && targetEntity && pieceOnTarget.color === game.turn()) selectPiece(targetEntity);
+                            else { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; }
                         }
-                    } else { 
-                        clearLegalMoves(); 
-                        gameState = 'IDLE'; 
-                        selectedPieceEntity = null;
-                    }
+                    } else { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; }
                 }
             }
-
             function selectPiece(entity) {
                 clearLegalMoves();
                 selectedPieceEntity = entity;
@@ -582,12 +512,10 @@
                     legalMoveEntities.push(marker);
                 });
             }
-
             function clearLegalMoves() {
                 legalMoveEntities.forEach(e => e.parentNode && e.parentNode.removeChild(e));
                 legalMoveEntities = [];
             }
-            
             function movePiece() {
                 clearLegalMoves(); 
                 gameState = 'IDLE';
@@ -598,7 +526,6 @@
                     setTimeout(makeAIMove, 500);
                 }
             }
-            
             function makeAIMove() {
                 const moves = game.moves();
                 if (moves.length > 0) {
@@ -606,16 +533,14 @@
                     movePiece();
                 }
             }
-
             function updateGameStatus() {
                 let status = '';
                 const moveColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
-                if (game.in_checkmate()) { status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`; } 
-                else if (game.in_draw()) { status = 'Empate'; } 
+                if (game.in_checkmate()) status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`; 
+                else if (game.in_draw()) status = 'Empate';
                 else { status = `Turno de las ${moveColor}`; if (game.in_check()) status += ' - ¡Jaque!'; }
                 document.getElementById('game-status').textContent = status;
             }
-
             function squareToPosition(square) {
                 const boardSize = 0.6; const squareSize = boardSize / 8;
                 const offset = -boardSize/2 + squareSize/2;
@@ -627,6 +552,7 @@
     </script>
 </body>
 </html>
+
 
 
 
