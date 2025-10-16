@@ -198,7 +198,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.1.0"; // Versión con AR funcional
+            const APP_VERSION = "3.2.0"; // Versión con inicialización AR robusta
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
             // --- Estado del juego y variables globales ---
@@ -250,7 +250,6 @@
 
             // --- Navegación ---
             function navigateTo(screenName) {
-                // Si existe una escena de A-Frame, la eliminamos para limpiar recursos
                 if (sceneEl && sceneEl.parentNode) {
                     if (sceneEl.is('ar-mode')) {
                         sceneEl.exitVR();
@@ -266,7 +265,7 @@
             buttons.start.addEventListener('click', () => {
                 navigateTo('initialLoading');
                 initializeLoadingScreen();
-                setTimeout(() => navigateTo('selection'), 1500); // Simula carga y navega
+                setTimeout(() => navigateTo('selection'), 1500);
             });
 
             document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
@@ -304,9 +303,6 @@
             buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
             
             buttons.exitAR.addEventListener('click', () => {
-                game.reset();
-                boardPlaced = false;
-                // La navegación se gestiona en el evento 'exit-vr' para mayor estabilidad
                 if (sceneEl && sceneEl.is('ar-mode')) {
                     sceneEl.exitVR(); 
                 } else {
@@ -316,15 +312,14 @@
 
             buttons.startAR.addEventListener('click', () => {
                 navigateTo('arEntryLoading');
-                // Damos un pequeño respiro al navegador para que muestre la pantalla de carga
-                setTimeout(setupARScene, 100);
+                setupARScene();
             });
 
-            // --- LÓGICA DE REALIDAD AUMENTADA (CORREGIDA) ---
+            // --- LÓGICA DE REALIDAD AUMENTADA (CORREGIDA Y ROBUSTA) ---
 
             function setupARScene() {
                 const arContainer = document.getElementById('ar-container');
-                arContainer.innerHTML = ''; // Limpiar escena anterior
+                arContainer.innerHTML = ''; 
 
                 const assetUrls = new Set();
                 if (assetMap[selectedSet]) {
@@ -343,14 +338,10 @@
                         renderer="colorManagement: true; physicallyCorrectLights: true;"
                         ar-logic>
                         <a-assets timeout="45000">${assetsContent}</a-assets>
-                        
                         <a-camera></a-camera>
-                        
                         <a-light type="ambient" color="#FFF" intensity="0.7"></a-light>
                         <a-light type="directional" position="-1 2 1" intensity="0.8"></a-light>
-                        
                         <a-entity id="board-container" visible="false"></a-entity>
-                        
                         <a-entity id="reticle" 
                             ar-hit-test="target: #board-container" 
                             geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" 
@@ -359,29 +350,41 @@
                         </a-entity>
                     </a-scene>
                 `;
+                
                 arContainer.innerHTML = sceneHTML;
                 
-                sceneEl = document.getElementById('ar-scene');
-                
                 // ✅ LA SOLUCIÓN CLAVE:
-                // Esperamos a que la escena de A-Frame esté completamente cargada
-                sceneEl.addEventListener('loaded', () => {
-                    console.log("A-Frame Scene is fully loaded.");
-                    navigateTo('ar');
-                    document.getElementById('ar-loading-status-text').textContent = "¡Portal listo! Presiona el botón para invocar.";
-                    // Habilitamos el botón de entrada a AR solo cuando todo está listo.
-                    sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
-                    sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
-                });
-                
-                // Manejo de errores de carga de assets
-                const assetsEl = sceneEl.querySelector('a-assets');
-                if(assetsEl) {
-                    assetsEl.addEventListener('timeout', () => {
-                        console.error("Asset loading timed out.");
-                        document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
-                    });
-                }
+                // Usamos un setTimeout para asegurar que el DOM se haya actualizado antes de buscar la escena.
+                setTimeout(() => {
+                    sceneEl = document.getElementById('ar-scene');
+                    
+                    if (sceneEl) {
+                        const assetsEl = sceneEl.querySelector('a-assets');
+
+                        const onAssetsLoaded = () => {
+                            console.log("A-Frame Assets are fully loaded.");
+                            navigateTo('ar');
+                            document.getElementById('ar-loading-status-text').textContent = "¡Portal listo! Presiona el botón para invocar.";
+                            sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
+                            sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
+                        };
+
+                        if (assetsEl.hasLoaded) {
+                           onAssetsLoaded();
+                        } else {
+                            assetsEl.addEventListener('loaded', onAssetsLoaded);
+                        }
+
+                        assetsEl.addEventListener('timeout', () => {
+                            console.error("Asset loading timed out.");
+                            document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
+                        });
+
+                    } else {
+                        console.error("Fatal Error: Could not find the A-Frame scene element after creation.");
+                        document.getElementById('ar-loading-status-text').textContent = "Error fatal al crear la escena AR.";
+                    }
+                }, 100); // Una pequeña espera es suficiente
             }
 
             AFRAME.registerComponent('ar-logic', {
@@ -404,17 +407,18 @@
                         document.getElementById('ar-instructions-ui').classList.remove('hidden');
                         buttons.exitAR.style.display = 'block';
                         boardPlaced = false;
-                        this.reticle.setAttribute('visible', 'true'); // Make sure reticle is visible on entry
+                        game.reset();
+                        this.reticle.setAttribute('visible', 'true');
                         this.reticle.setAttribute('ar-hit-test', 'target: #board-container');
+                        this.boardContainer.setAttribute('visible', 'false');
+                        this.boardContainer.innerHTML = ''; // Limpiar tablero anterior
                     }
                 },
                 onExitVR: function() {
-                    // This event ensures we navigate away cleanly
                     navigateTo('gameMode');
                 },
                 onSelect: function() {
                     if (!boardPlaced && this.reticle.getAttribute('visible')) {
-                        // Place the board at the reticle's position
                         const reticleMatrix = this.reticle.object3D.matrixWorld;
                         this.boardContainer.object3D.matrix.copy(reticleMatrix);
 
@@ -438,8 +442,7 @@
                 }
             });
 
-            // --- Lógica del juego de ajedrez ---
-
+            // --- Lógica del juego de ajedrez (sin cambios) ---
             function initializeLoadingScreen() {
                 const pieceLoader = document.getElementById('piece-loader');
                 const particleContainer = document.getElementById('particle-container');
@@ -624,7 +627,5 @@
     </script>
 </body>
 </html>
-
-
 
 
