@@ -24,11 +24,11 @@
         .screen.active {
             display: flex;
         }
-        .selection-card, .board-card, .color-swatch {
+        .selection-card, .board-card, .color-swatch, .mode-card {
             transition: all 0.3s ease;
             border: 4px solid transparent;
         }
-        .selection-card.selected, .board-card.selected, .color-swatch.selected {
+        .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected {
             border-color: #FBBF24; /* amber-400 */
             transform: scale(1.05);
         }
@@ -52,34 +52,48 @@
             font-size: 0.8rem;
             z-index: 100;
         }
+        .game-status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            z-index: 100;
+            font-size: 1.2rem;
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-stone-900 text-white overflow-hidden">
     <div id="app-version" class="version"></div>
+    <div id="game-status" class="game-status"></div>
 
     <!-- Pantalla de Bienvenida -->
     <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
         <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Ajedrez en Realidad Aumentada</h1>
-        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Explora el mundo del ajedrez clásico y futurista en tu entorno físico.</p>
+        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Vive la magia del ajedrez con piezas en 3D en tu propio entorno.</p>
         <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar</button>
     </div>
 
     <!-- Pantalla de Selección de Set de Piezas -->
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10">
-            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu set</h2>
-            <p class="text-stone-300">Elige el set de piezas con el que quieres jugar.</p>
+            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Set</h2>
+            <p class="text-stone-300">Elige el estilo de piezas para tu partida.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="classic">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♔</span></div>
-                <h3 class="text-2xl font-semibold mb-2">Clásico</h3>
-                <p class="text-stone-400">Set elegante y tradicional.</p>
+            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter">
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><img src="https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/logo.png" alt="Harry Potter Set" class="h-32"></div>
+                <h3 class="text-2xl font-semibold mb-2">Wizard's Chess</h3>
+                <p class="text-stone-400">Piezas inspiradas en el ajedrez mágico.</p>
             </div>
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic">
                 <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♜</span></div>
                 <h3 class="text-2xl font-semibold mb-2">Futurista</h3>
-                <p class="text-stone-400">Diseño moderno y disruptivo.</p>
+                <p class="text-stone-400">Diseño moderno y disruptivo (primitivas).</p>
             </div>
         </div>
         <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
@@ -88,102 +102,130 @@
     <!-- Pantalla de Selección de Tablero y Colores -->
     <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10">
-             <h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu partida</h2>
+             <h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2>
              <p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p>
         </div>
         <div class="max-w-4xl w-full">
             <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-wood">
-                    <img src="https://placehold.co/400x300/854d0e/fefce8?text=Madera+Clásica" alt="Tablero de Madera" class="w-full h-40 object-cover rounded-md mb-3">
-                    <p class="font-semibold">Madera Clásica</p>
-                </div>
-                 <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-marble">
-                    <img src="https://placehold.co/400x300/d1d5db/1f2937?text=Mármol+Elegante" alt="Tablero de Mármol" class="w-full h-40 object-cover rounded-md mb-3">
-                    <p class="font-semibold">Mármol Elegante</p>
-                </div>
+                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-wood"><img src="https://placehold.co/400x300/854d0e/fefce8?text=Madera+Clásica" class="w-full h-40 object-cover rounded-md mb-3"><p>Madera Clásica</p></div>
+                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-marble"><img src="https://placehold.co/400x300/d1d5db/1f2937?text=Mármol+Elegante" class="w-full h-40 object-cover rounded-md mb-3"><p>Mármol Elegante</p></div>
             </div>
              <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige el color de tus piezas</h3>
             <div class="flex justify-center gap-6">
-                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-white" data-color="white"></div>
-                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-gray-800" data-color="black"></div>
+                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-white" data-color="w"></div>
+                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-gray-800" data-color="b"></div>
             </div>
         </div>
-        <button id="continue-board-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Iniciar Partida</button>
-         <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors">Volver</button>
+        <button id="continue-board-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
+        <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
+    <!-- Pantalla de Selección de Modo de Juego -->
+    <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
+        <div class="text-center mb-10">
+             <h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Juego</h2>
+             <p class="text-stone-300">¿Cómo quieres jugar?</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva">
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div>
+                <h3 class="text-2xl font-semibold">Jugador vs. Máquina</h3>
+            </div>
+            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pvp">
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧑‍🤝‍🧑</div>
+                <h3 class="text-2xl font-semibold">Jugador vs. Jugador</h3>
+            </div>
+        </div>
+        <button id="start-game-btn" class="mt-12 bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Iniciar Partida</button>
+        <button id="back-to-board-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
+    </div>
 
     <!-- Pantalla de AR -->
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-black">
         <div id="instructions" class="text-center p-8 z-20 bg-black bg-opacity-80 rounded-lg">
-            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara tu cámara y el marcador</h2>
-            <p class="mb-6 max-w-lg text-stone-200">Apunta la cámara de tu dispositivo al marcador para que aparezca el tablero. <br>Puedes descargar el marcador aquí:</p>
-            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block bg-amber-400 text-stone-900 font-bold py-2 px-6 rounded-full hover:bg-amber-300 transition-transform transform hover:scale-105">Descargar Marcador</a>
-            <div class="my-6">
-                <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" alt="Marcador de Ajedrez" class="w-48 h-auto mx-auto border-4 border-white rounded-lg">
-            </div>
+            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara tu Cámara</h2>
+            <p class="mb-6 max-w-lg text-stone-200">Apunta al marcador para que aparezca el tablero.</p>
+            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block underline text-amber-300">Descargar Marcador</a>
+            <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" class="w-48 h-auto mx-auto border-4 border-white rounded-lg mt-4">
         </div>
-        <button id="back-to-board-btn" class="absolute top-5 left-5 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 transition-colors z-30" style="display: none;">Volver</button>
+        <button id="back-to-mode-btn" class="absolute top-5 left-5 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30" style="display: none;">Salir</button>
         <div id="ar-container"></div>
     </div>
     
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 text-amber-200 flex items-center justify-center" style="display: none; z-index: 50;">
-        <span class="text-2xl font-bold animate-pulse">Cargando escena AR...</span>
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 text-amber-200 flex flex-col items-center justify-center" style="display: none; z-index: 50;">
+        <span class="text-2xl font-bold animate-pulse mb-4">Cargando Escena AR...</span>
+        <span class="text-lg" id="loading-message">Cargando modelos 3D...</span>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "1.1.0"; // Versión actual de la app
+            const APP_VERSION = "1.2.0";
+
+            // Game state variables
+            let game = new Chess();
+            let gameState = 'IDLE'; // IDLE, PIECE_SELECTED
+            let selectedPieceEntity = null;
+            let legalMoveEntities = [];
+            let playerColor = 'w';
+            let gameMode = 'pva'; // pvp, pva
             
+            // UI Elements
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
                 selection: document.getElementById('selection-screen'),
                 boardSelection: document.getElementById('board-selection-screen'),
+                gameMode: document.getElementById('game-mode-screen'),
                 ar: document.getElementById('ar-screen'),
             };
-
             const buttons = {
                 start: document.getElementById('start-btn'),
                 continueSet: document.getElementById('continue-set-btn'),
                 continueBoard: document.getElementById('continue-board-btn'),
+                startGame: document.getElementById('start-game-btn'),
                 backToSet: document.getElementById('back-to-set-btn'),
-                backToBoard: document.getElementById('back-to-board-btn'),
+                backToBoardSelect: document.getElementById('back-to-board-select-btn'),
+                backToMode: document.getElementById('back-to-mode-btn'),
             };
-
             const selectionCards = document.querySelectorAll('.selection-card');
             const boardCards = document.querySelectorAll('.board-card');
             const colorSwatches = document.querySelectorAll('.color-swatch');
-
+            const modeCards = document.querySelectorAll('.mode-card');
+            
             const arContainer = document.getElementById('ar-container');
             const instructions = document.getElementById('instructions');
             const loadingOverlay = document.getElementById('loading-overlay');
-            const versionDisplay = document.getElementById('app-version');
+            const gameStatusEl = document.getElementById('game-status');
             
+            // User choices
             let selectedSet = null;
             let selectedBoard = null;
-            let selectedColor = null;
             let sceneEl = null;
 
-            versionDisplay.textContent = `v${APP_VERSION}`;
-
-            // Simulación de comprobación de versión
-            function checkVersion() {
-                // En un caso real, esto haría una llamada a un servidor
-                const latestVersion = "1.1.0"; // Simula la última versión disponible
-                if (APP_VERSION < latestVersion) {
-                    console.log("Nueva versión disponible. Actualizando...");
-                    window.location.reload(true);
-                } else {
-                    console.log("La aplicación está actualizada.");
+            // Asset mapping for 3D models
+            const assetMap = {
+                'harry-potter': {
+                    w: {
+                        p: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Gryffindor.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        r: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        n: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        b: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        q: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        k: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/King_Dumbledore.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                    },
+                    b: {
+                        p: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Sytherin.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        r: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby2.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        n: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' }, // Reused, rotated
+                        b: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter_Hollow.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                        q: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' }, // Reused, rotated
+                        k: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/King_Voldemort.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
+                    }
                 }
-            }
-            // Comprueba la versión al cargar y luego cada 5 minutos
-            checkVersion();
-            setInterval(checkVersion, 300000);
+            };
 
-
+            // ---- Navigation Logic ----
             function navigateTo(screenName) {
                 Object.values(screens).forEach(s => s.classList.remove('active'));
                 if (screens[screenName]) screens[screenName].classList.add('active');
@@ -192,82 +234,92 @@
                     if (sceneEl) {
                         sceneEl.pause();
                         sceneEl.renderer.dispose();
+                        arContainer.innerHTML = '';
+                        sceneEl = null;
                     }
-                    arContainer.innerHTML = '';
-                    sceneEl = null;
                     instructions.style.display = 'block';
-                    buttons.backToBoard.style.display = 'none';
+                    buttons.backToMode.style.display = 'none';
+                    gameStatusEl.style.display = 'none';
                 }
             }
 
             buttons.start.addEventListener('click', () => navigateTo('selection'));
             buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
-            buttons.backToBoard.addEventListener('click', () => navigateTo('boardSelection'));
-
-            selectionCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    selectionCards.forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    selectedSet = card.dataset.set;
-                    buttons.continueSet.disabled = false;
-                });
+            buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
+            buttons.backToMode.addEventListener('click', () => {
+                game.reset();
+                navigateTo('gameMode');
             });
             
-            buttons.continueSet.addEventListener('click', () => {
-                if (selectedSet) {
-                    navigateTo('boardSelection');
-                }
-            });
+            selectionCards.forEach(card => card.addEventListener('click', () => {
+                selectionCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedSet = card.dataset.set;
+                buttons.continueSet.disabled = false;
+            }));
 
-            boardCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    boardCards.forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    selectedBoard = card.dataset.board;
-                    validateBoardSelection();
-                });
-            });
+            buttons.continueSet.addEventListener('click', () => { if (selectedSet) navigateTo('boardSelection'); });
 
-            colorSwatches.forEach(swatch => {
-                swatch.addEventListener('click', () => {
-                    colorSwatches.forEach(s => s.classList.remove('selected'));
-                    swatch.classList.add('selected');
-                    selectedColor = swatch.dataset.color;
-                    validateBoardSelection();
-                });
-            });
+            boardCards.forEach(card => card.addEventListener('click', () => {
+                boardCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedBoard = card.dataset.board;
+                validateStep2();
+            }));
 
-            function validateBoardSelection() {
-                buttons.continueBoard.disabled = !(selectedBoard && selectedColor);
-            }
+            colorSwatches.forEach(swatch => swatch.addEventListener('click', () => {
+                colorSwatches.forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+                playerColor = swatch.dataset.color;
+                validateStep2();
+            }));
+            
+            function validateStep2() { buttons.continueBoard.disabled = !(selectedBoard && playerColor); }
 
-            buttons.continueBoard.addEventListener('click', () => {
-                if (selectedBoard && selectedColor) {
+            buttons.continueBoard.addEventListener('click', () => { if (selectedBoard && playerColor) navigateTo('gameMode'); });
+
+            modeCards.forEach(card => card.addEventListener('click', () => {
+                modeCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                gameMode = card.dataset.mode;
+                buttons.startGame.disabled = false;
+            }));
+
+            buttons.startGame.addEventListener('click', () => {
+                if(gameMode) {
                     navigateTo('ar');
-                    showLoading(true);
+                    showLoading(true, "Iniciando partida...");
                     setTimeout(() => {
                         instructions.style.display = 'none';
-                        buttons.backToBoard.style.display = 'block';
-                        setupARScene(selectedSet, selectedBoard);
+                        buttons.backToMode.style.display = 'block';
+                        gameStatusEl.style.display = 'block';
+                        setupARScene();
                         showLoading(false);
                     }, 1500);
                 }
             });
-            
-            function showLoading(on) {
+
+            function showLoading(on, message = "") {
                 loadingOverlay.style.display = on ? 'flex' : 'none';
+                document.getElementById('loading-message').textContent = message;
             }
 
-            function setupARScene(pieceSet, boardStyle) {
-                arContainer.innerHTML = '';
-
+            // ---- AR and Game Logic ----
+            function setupARScene() {
                 sceneEl = document.createElement('a-scene');
                 sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;');
                 sceneEl.setAttribute('color-space', 'sRGB');
                 sceneEl.setAttribute('renderer', 'colorManagement: true, physicallyCorrectLights');
                 sceneEl.setAttribute('vr-mode-ui', 'enabled: false');
-                sceneEl.setAttribute('device-orientation-permission-ui', 'enabled: false');
                 sceneEl.setAttribute('embedded','');
+
+                // Preload assets
+                const assetsEl = document.createElement('a-assets');
+                if (assetMap[selectedSet]) {
+                    Object.values(assetMap[selectedSet].w).forEach(p => { assetsEl.innerHTML += `<a-asset-item id="${p.url}" src="${p.url}"></a-asset-item>`; });
+                    Object.values(assetMap[selectedSet].b).forEach(p => { assetsEl.innerHTML += `<a-asset-item id="${p.url}" src="${p.url}"></a-asset-item>`; });
+                }
+                sceneEl.appendChild(assetsEl);
 
                 const cameraEl = document.createElement('a-camera');
                 cameraEl.setAttribute('position', '0 0 0');
@@ -277,108 +329,221 @@
                 const targetEntity = document.createElement('a-entity');
                 targetEntity.setAttribute('mindar-image-target', 'targetIndex: 0');
                 
-                // Añadir el tablero como un plano
-                const boardEl = document.createElement('a-plane');
-                const boardSize = 1.4;
-                boardEl.setAttribute('width', boardSize);
-                boardEl.setAttribute('height', boardSize);
-                boardEl.setAttribute('rotation', '-90 0 0');
-                const boardTextures = {
-                    'classic-wood': 'https://placehold.co/512x512/854d0e/fefce8?text=+',
-                    'classic-marble': 'https://placehold.co/512x512/d1d5db/1f2937?text=+'
-                };
-                boardEl.setAttribute('material', `src: ${boardTextures[boardStyle]};`);
-                targetEntity.appendChild(boardEl);
-
-                createChessPieces(targetEntity, pieceSet);
-
+                create3DBoard(targetEntity);
+                renderBoardFromFen(targetEntity);
+                
                 sceneEl.appendChild(targetEntity);
                 arContainer.appendChild(sceneEl);
+
+                sceneEl.addEventListener('click', handleSceneClick);
+                updateGameStatus();
             }
 
-            function createChessPieces(entity, pieceSet) {
-                const game = new Chess();
-                renderBoardFromFen(entity, game.fen(), pieceSet);
-            }
-
-            function renderBoardFromFen(entity, fen, pieceSet) {
+            function create3DBoard(parent) {
                 const boardSize = 1.4;
                 const squareSize = boardSize / 8;
-                const offset = -boardSize / 2 + squareSize / 2;
+                const boardGroup = document.createElement('a-entity');
                 
-                const fenParts = fen.split(' ')[0].split('/');
+                for(let i = 0; i < 8; i++) {
+                    for(let j = 0; j < 8; j++) {
+                        const squareEl = document.createElement('a-box');
+                        squareEl.setAttribute('width', squareSize);
+                        squareEl.setAttribute('height', 0.02);
+                        squareEl.setAttribute('depth', squareSize);
+                        const color = (i + j) % 2 === 0 ? '#D18B47' : '#FFCE9E';
+                        squareEl.setAttribute('color', color);
+                        const x = -boardSize/2 + squareSize/2 + j * squareSize;
+                        const z = -boardSize/2 + squareSize/2 + i * squareSize;
+                        squareEl.setAttribute('position', `${x} -0.01 ${z}`);
+                        
+                        const squareID = 'abcdefgh'[j] + (8 - i);
+                        squareEl.dataset.square = squareID;
+                        squareEl.classList.add('clickable-square');
+                        boardGroup.appendChild(squareEl);
+                    }
+                }
+                parent.appendChild(boardGroup);
+            }
+            
+            function renderBoardFromFen(parent) {
+                // Clear old pieces
+                parent.querySelectorAll('.chess-piece').forEach(el => el.remove());
+                
+                const boardSize = 1.4;
+                const squareSize = boardSize / 8;
+                const offset = -boardSize/2 + squareSize/2;
+                
+                const board = game.board();
+                
+                board.forEach((row, i) => {
+                    row.forEach((piece, j) => {
+                        if (!piece) return;
+                        
+                        const pieceEl = document.createElement('a-entity');
+                        pieceEl.classList.add('chess-piece', 'clickable');
+                        pieceEl.dataset.square = piece.square;
 
-                for (let row = 0; row < 8; row++) {
-                    let col = 0;
-                    for (const symbol of fenParts[row]) {
-                        if (!isNaN(symbol)) {
-                            col += parseInt(symbol);
-                            continue;
+                        if (assetMap[selectedSet]) {
+                            const modelData = assetMap[selectedSet][piece.color][piece.type];
+                            pieceEl.setAttribute('gltf-model', `url(${modelData.url})`);
+                            pieceEl.setAttribute('scale', modelData.scale);
+                            pieceEl.setAttribute('rotation', modelData.rotation);
+                        } else {
+                            // Fallback to primitives for futuristic set
+                            const primitive = getPrimitive(piece.type, piece.color);
+                            pieceEl.setAttribute('geometry', primitive.geometry);
+                            pieceEl.setAttribute('material', primitive.material);
                         }
                         
-                        const { type, color } = pieceFromFen(symbol);
-                        const pieceEl = document.createElement('a-entity');
-                        const primitive = getPrimitive(type, color, pieceSet);
-
-                        pieceEl.setAttribute('geometry', primitive.geometry);
-                        pieceEl.setAttribute('material', primitive.material);
-                        
-                        const x = offset + col * squareSize;
-                        const z = offset + row * squareSize;
+                        const x = offset + j * squareSize;
+                        const z = offset + i * squareSize;
                         pieceEl.setAttribute('position', `${x} 0 ${z}`);
+                        parent.appendChild(pieceEl);
+                    });
+                });
+            }
 
-                        entity.appendChild(pieceEl);
-                        col++;
+            function handleSceneClick(evt) {
+                const target = evt.target;
+                if (game.turn() !== playerColor && gameMode === 'pva') return; // It's AI's turn
+
+                if (gameState === 'IDLE') {
+                    if (target.classList.contains('chess-piece')) {
+                        const square = target.dataset.square;
+                        const piece = game.get(square);
+                        if (piece && piece.color === game.turn()) {
+                            selectPiece(target);
+                        }
+                    }
+                } else if (gameState === 'PIECE_SELECTED') {
+                    let toSquare = null;
+                    if(target.classList.contains('chess-piece')) {
+                        toSquare = target.dataset.square;
+                    } else if (target.classList.contains('legal-move-marker')) {
+                        toSquare = target.dataset.square;
+                    }
+                    
+                    if (toSquare) {
+                        const fromSquare = selectedPieceEntity.dataset.square;
+                        const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' }); // Auto-promote to queen
+                        
+                        if (move) {
+                            movePiece(fromSquare, toSquare);
+                        } else {
+                            // Invalid move, deselect
+                            clearLegalMoves();
+                            selectedPieceEntity = null;
+                            gameState = 'IDLE';
+                        }
+                    } else {
+                        // Clicked somewhere else, deselect
+                        clearLegalMoves();
+                        selectedPieceEntity = null;
+                        gameState = 'IDLE';
                     }
                 }
             }
 
-            function pieceFromFen(fenSymbol) {
-                const fenToType = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
-                const type = fenToType[fenSymbol.toLowerCase()];
-                const color = fenSymbol === fenSymbol.toLowerCase() ? 'b' : 'w';
-                return { type, color };
+            function selectPiece(entity) {
+                clearLegalMoves();
+                selectedPieceEntity = entity;
+                gameState = 'PIECE_SELECTED';
+                
+                const moves = game.moves({ square: entity.dataset.square, verbose: true });
+                moves.forEach(move => {
+                    const pos = squareToPosition(move.to);
+                    const marker = document.createElement('a-cylinder');
+                    marker.setAttribute('radius', 0.05);
+                    marker.setAttribute('height', 0.01);
+                    marker.setAttribute('color', 'green');
+                    marker.setAttribute('opacity', '0.5');
+                    marker.setAttribute('position', `${pos.x} 0.01 ${pos.z}`);
+                    marker.classList.add('legal-move-marker', 'clickable');
+                    marker.dataset.square = move.to;
+                    sceneEl.querySelector('[mindar-image-target]').appendChild(marker);
+                    legalMoveEntities.push(marker);
+                });
             }
 
-            function getPrimitive(type, color, set) {
-                const key = type + (color === 'b' ? '_b' : '');
-                // Aquí se usarían modelos 3D en un futuro. Por ahora, se mantienen las primitivas.
-                const styles = {
-                     classic: {
-                        pawn: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
-                        rook: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
-                        knight: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #E5E7EB' },
-                        bishop: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #E5E7EB' },
-                        queen: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #FBBF24' },
-                        king: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #FDE68A' },
-                        pawn_b: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #4B5563' },
-                        rook_b: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #4B5563' },
-                        knight_b: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #4B5563' },
-                        bishop_b: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #4B5563' },
-                        queen_b: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #6B7280' },
-                        king_b: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #1F2937' },
-                    },
-                    futuristic: {
-                        pawn: { geometry: 'primitive: octahedron; radius: 0.06', material: 'color: #67E8F9; metalness: 0.8; roughness: 0.2' },
-                        rook: { geometry: 'primitive: box; width: 0.12; height: 0.12; depth: 0.12', material: 'color: #A78BFA; metalness: 0.8; roughness: 0.2' },
-                        knight: { geometry: 'primitive: torus-knot; radius: 0.05; radiusTubular: 0.015; p:2; q:3', material: 'color: #F472B6; metalness: 0.8; roughness: 0.2' },
-                        bishop: { geometry: 'primitive: tetrahedron; radius: 0.1', material: 'color: #C084FC; metalness: 0.8; roughness: 0.2' },
-                        queen: { geometry: 'primitive: cone; height: 0.2; radiusBottom: 0.08', material: 'color: #34D399; metalness: 0.8; roughness: 0.2' },
-                        king: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #FBBF24; metalness: 0.8; roughness: 0.2' },
-                        pawn_b: { geometry: 'primitive: octahedron; radius: 0.06', material: 'color: #0E7490; metalness: 0.8; roughness: 0.2' },
-                        rook_b: { geometry: 'primitive: box; width: 0.12; height: 0.12; depth: 0.12', material: 'color: #6D28D9; metalness: 0.8; roughness: 0.2' },
-                        knight_b: { geometry: 'primitive: torus-knot; radius: 0.05; radiusTubular: 0.015; p:2; q:3', material: 'color: #BE185D; metalness: 0.8; roughness: 0.2' },
-                        bishop_b: { geometry: 'primitive: tetrahedron; radius: 0.1', material: 'color: #7E22CE; metalness: 0.8; roughness: 0.2' },
-                        queen_b: { geometry: 'primitive: cone; height: 0.2; radiusBottom: 0.08', material: 'color: #047857; metalness: 0.8; roughness: 0.2' },
-                        king_b: { geometry: 'primitive: torus; radius: 0.07; radiusTubular: 0.02', material: 'color: #B45309; metalness: 0.8; roughness: 0.2' },
+            function clearLegalMoves() {
+                legalMoveEntities.forEach(e => e.remove());
+                legalMoveEntities = [];
+            }
+            
+            function movePiece(from, to) {
+                clearLegalMoves();
+                gameState = 'IDLE';
+                renderBoardFromFen(sceneEl.querySelector('[mindar-image-target]'));
+                updateGameStatus();
+
+                if (game.game_over()) return;
+
+                if (gameMode === 'pva' && game.turn() !== playerColor) {
+                    // AI's turn
+                    setTimeout(makeAIMove, 500);
+                }
+            }
+            
+            function makeAIMove() {
+                const moves = game.moves();
+                const move = moves[Math.floor(Math.random() * moves.length)];
+                game.move(move);
+                renderBoardFromFen(sceneEl.querySelector('[mindar-image-target]'));
+                updateGameStatus();
+            }
+
+            function updateGameStatus() {
+                let status = '';
+                const moveColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
+
+                if (game.in_checkmate()) {
+                    status = `Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`;
+                } else if (game.in_draw()) {
+                    status = 'Empate';
+                } else {
+                    status = `Turno de las ${moveColor}`;
+                    if (game.in_check()) {
+                        status += ' - Jaque!';
                     }
+                }
+                gameStatusEl.textContent = status;
+            }
+
+            // Helper functions
+            function squareToPosition(square) {
+                const boardSize = 1.4;
+                const squareSize = boardSize / 8;
+                const offset = -boardSize/2 + squareSize/2;
+                const col = 'abcdefgh'.indexOf(square[0]);
+                const row = 8 - parseInt(square[1]);
+                return { x: offset + col * squareSize, z: offset + row * squareSize };
+            }
+
+            // Fallback for futuristic set
+            function getPrimitive(type, color) {
+                // Simplified from previous version
+                const key = type + (color === 'b' ? '_b' : '');
+                const style = {
+                    p_w: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
+                    r_w: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
+                    n_w: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #E5E7EB' },
+                    b_w: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #E5E7EB' },
+                    q_w: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #FBBF24' },
+                    k_w: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #FDE68A' },
+                    p_b: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #4B5563' },
+                    r_b: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #4B5563' },
+                    n_b: { geometry: 'primitive: cone; radiusBottom: 0.05; height: 0.15', material: 'color: #4B5563' },
+                    b_b: { geometry: 'primitive: cylinder; height: 0.18; radiusTop: 0.01; radiusBottom: 0.05', material: 'color: #4B5563' },
+                    q_b: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #6B7280' },
+                    k_b: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #1F2937' }
                 };
-                return styles[set][key];
+                return style[type + '_' + color] || style['p' + '_' + color];
             }
         });
     </script>
 </body>
 </html>
+
 
 
 
