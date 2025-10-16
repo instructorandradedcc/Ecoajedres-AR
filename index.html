@@ -3,47 +3,21 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Ajedrez AR (Sin Marcadores)</title>
+    <title>Duelo de Magos: Ajedrez</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <style>
         /* Estilos generales */
-        body {
-            overscroll-behavior: none; /* Previene "pull-to-refresh" */
-        }
-        html.ar-active, body.ar-active {
-            overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0;
-        }
-        .screen {
-            display: none; position: absolute; top: 0; left: 0;
-            width: 100%; min-height: 100%; overflow-y: auto;
-            transition: opacity 0.5s ease-in-out; z-index: 10;
-        }
+        body { overscroll-behavior: none; }
+        html.ar-active, body.ar-active { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }
+        .screen { display: none; position: absolute; top: 0; left: 0; width: 100%; min-height: 100%; overflow-y: auto; transition: opacity 0.5s ease-in-out; z-index: 10; }
         .screen.active { display: flex; }
-        .selection-card, .board-card, .color-swatch, .mode-card {
-            transition: all 0.3s ease; border: 4px solid transparent;
-        }
-        .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected {
-            border-color: #FBBF24; transform: scale(1.05);
-        }
-        #ar-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;
-        }
-        .version {
-            position: fixed; bottom: 10px; right: 10px; color: #9ca3af; font-size: 0.8rem; z-index: 100;
-        }
-        .game-status {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background-color: rgba(0,0,0,0.7); color: white; padding: 10px 20px;
-            border-radius: 20px; z-index: 100; font-size: 1.2rem; display: none;
-        }
-        #ar-instructions-ui {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 9991; display: flex; justify-content: center; align-items: center;
-            pointer-events: none; background-color: rgba(0,0,0,0.7);
-            color: white; padding: 20px; border-radius: 15px;
-            text-align: center; font-size: 1.2rem; transition: opacity 0.3s;
-        }
+        .selection-card, .board-card, .color-swatch, .mode-card { transition: all 0.3s ease; border: 4px solid transparent; }
+        .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected { border-color: #FBBF24; transform: scale(1.05); }
+        #ar-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
+        .version { position: fixed; bottom: 10px; right: 10px; color: #9ca3af; font-size: 0.8rem; z-index: 100; }
+        .game-status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; z-index: 100; font-size: 1.2rem; display: none; }
+        #ar-instructions-ui { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9991; display: flex; justify-content: center; align-items: center; pointer-events: none; background-color: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 15px; text-align: center; font-size: 1.2rem; transition: opacity 0.3s; }
         #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
         
         .a-enter-vr-button {
@@ -54,47 +28,33 @@
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
         }
         
-        /* MEJORA: Estilos para la nueva pantalla de carga */
-        #initial-loading-screen {
-            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Fondo+Medieval');
-            background-size: cover;
-            background-position: center;
+        #initial-loading-screen { background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Fondo+Medieval'); background-size: cover; background-position: center; }
+        #progress-bar-container { width: 80%; max-width: 500px; height: 20px; background-color: #4a2a15; border-radius: 10px; border: 2px solid #e2b467; overflow: hidden; position: relative; }
+        #progress-bar { width: 0%; height: 100%; background-color: #fBBF24; transition: width 0.5s ease; }
+        #progress-icon { font-size: 32px; position: absolute; top: 50%; transform: translateY(-50%) translateX(-50%); left: 0%; transition: left 0.5s ease; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+
+        /* NUEVA PANTALLA DE CARGA PARA LA CÁMARA */
+        #ar-entry-loading-screen {
+            background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9));
+            z-index: 9990;
         }
-        #progress-bar-container {
-            width: 80%; max-width: 500px; height: 20px;
-            background-color: #4a2a15; border-radius: 10px;
-            border: 2px solid #e2b467; overflow: hidden; position: relative;
-        }
-        #progress-bar {
-            width: 0%; height: 100%; background-color: #fBBF24;
-            transition: width 0.5s ease;
-        }
-        #progress-icon {
-            font-size: 32px; position: absolute; top: 50%;
-            transform: translateY(-50%) translateX(-50%);
-            left: 0%; transition: left 0.5s ease;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulsing-icon { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
 <body class="bg-stone-900 text-white">
     <div id="app-version" class="version"></div>
     <div id="game-status" class="game-status"></div>
 
-    <!-- Pantallas de UI -->
-    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
-        <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Ajedrez en Realidad Aumentada</h1>
-        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Coloca un tablero de ajedrez 3D en tu propio entorno.</p>
-        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar</button>
+    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+Mágico');">
+        <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Duelo de Ajedrez Mágico</h1>
+        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Invoca un tablero de ajedrez 3D en tu propio entorno.</p>
+        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar Duelo</button>
     </div>
     
-    <!-- MEJORA: Nueva pantalla de carga inicial -->
     <div id="initial-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
         <h2 id="loading-title" class="text-4xl font-bold mb-4 text-amber-300">Preparando el Campo de Batalla</h2>
-        <div id="progress-bar-container" class="mb-4">
-            <div id="progress-bar"></div>
-            <div id="progress-icon">♘</div>
-        </div>
+        <div id="progress-bar-container" class="mb-4"><div id="progress-bar"></div><div id="progress-icon">♘</div></div>
         <p id="loading-text" class="text-stone-300 max-w-xl mb-6">Comprobando arsenal...</p>
     </div>
 
@@ -123,9 +83,9 @@
     </div>
 
     <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Juego</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
+        <div class="text-center mb-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Duelo</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div><h3 class="text-2xl font-semibold">Estratega Solitario (vs. IA)</h3></div>
+            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div><h3 class="text-2xl font-semibold">Estratega Solitario (vs. Oráculo)</h3></div>
             <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pvp"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧑‍🤝‍🧑</div><h3 class="text-2xl font-semibold">Duelo de Leyendas (1 vs. 1)</h3></div>
         </div>
         <button id="start-game-btn" class="mt-12 bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
@@ -136,16 +96,21 @@
         <h2 class="text-4xl font-bold mb-4 text-amber-300">Prepara tu Espacio de Juego</h2>
         <p class="text-stone-300 max-w-xl mb-6">El portal mágico necesita detectar una superficie plana y bien iluminada.</p>
         <div class="text-6xl mb-4">📱</div>
-        <p class="text-stone-300 max-w-xl mb-8">Cuando aparezca el botón "ENTER AR", presiónalo. Luego mueve tu cámara lentamente sobre una mesa o el suelo hasta que veas un retículo, y toca la pantalla para invocar el tablero.</p>
+        <p class="text-stone-300 max-w-xl mb-8">Cuando aparezca el botón para "INVOCAR", presiónalo. Luego mueve tu cámara lentamente sobre una mesa o el suelo hasta que veas un retículo, y toca la pantalla para materializar el tablero.</p>
         <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Entrar al Portal</button>
         <button id="back-to-mode-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
-    <!-- Pantalla de AR -->
+    <div id="ar-entry-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
+        <h2 class="text-4xl font-bold mb-4 text-amber-300">Abriendo el Portal...</h2>
+        <div class="text-8xl mb-6 pulsing-icon">♖</div>
+        <p class="text-stone-300 max-w-xl">Prepara tu vista mágica. Puede que necesites conceder permiso para usarla.</p>
+    </div>
+
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
         <div id="ar-container"></div>
         <div id="ar-ui-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Salir</button>
+            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Rendirse</p>
             <div id="ar-instructions-ui" class="hidden">
                 <p id="ar-instructions-text">Mueve tu dispositivo para encontrar una superficie.</p>
             </div>
@@ -155,7 +120,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.3.0"; // Versión por implementación de carga y caché automáticos
+            const APP_VERSION = "2.4.0"; // Versión con fix de caché y UI mejorada
             const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
             let game = new Chess();
@@ -172,6 +137,7 @@
                 boardSelection: document.getElementById('board-selection-screen'),
                 gameMode: document.getElementById('game-mode-screen'),
                 instructions: document.getElementById('instructions-screen'),
+                arEntryLoading: document.getElementById('ar-entry-loading-screen'), // Nueva pantalla
                 ar: document.getElementById('ar-screen'),
             };
             const buttons = {
@@ -207,6 +173,7 @@
                     w: { p: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Gryffindor.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02' }, b: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.02 0.02 0.02' }, k: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/King_Dumbledore.glb', scale: '0.02 0.02 0.02' } },
                     b: { p: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Sytherin.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby2.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter_Hollow.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/King_Voldemort.glb', scale: '0.02 0.02 0.02' } }
                 }
+                // Añadir set "futuristic" aquí si tienes los modelos
             };
 
             // ---- Lógica de Navegación y Carga ----
@@ -237,8 +204,7 @@
                 const assetsInCache = await checkCache();
                 if (assetsInCache) {
                     loadingText.textContent = "¡Recursos encontrados! Iniciando...";
-                    progressBar.style.width = '100%';
-                    progressIcon.style.left = '100%';
+                    updateProgress(100);
                 } else {
                     await downloadAndCacheAssets();
                 }
@@ -248,17 +214,23 @@
                 
                 setTimeout(() => navigateTo('selection'), 1000);
             }
+            
+            function updateProgress(percentage) {
+                progressBar.style.width = `${percentage}%`;
+                progressIcon.style.left = `${percentage}%`;
+            }
 
             async function checkCache() {
                 try {
+                    if (!('caches' in window)) return false;
                     const cache = await caches.open(CACHE_NAME);
                     const urls = getAllAssetUrls();
-                    const promises = urls.map(url => cache.match(url));
-                    const responses = await Promise.all(promises);
-                    return responses.every(res => res && res.ok);
-                } catch (e) {
-                    return false;
-                }
+                    for (const url of urls) {
+                        const response = await cache.match(url);
+                        if (!response || !response.ok) return false;
+                    }
+                    return true;
+                } catch (e) { console.error("Error checking cache:", e); return false; }
             }
             
             function getAllAssetUrls() {
@@ -271,29 +243,34 @@
             }
 
             async function downloadAndCacheAssets() {
+                if (!('caches' in window)) {
+                    console.warn("Cache API not available. Assets will be loaded directly.");
+                    updateProgress(100); // Simula la carga
+                    return;
+                }
                 const cache = await caches.open(CACHE_NAME);
                 const urls = getAllAssetUrls();
                 let loadedCount = 0;
                 
-                const promises = urls.map(async url => {
+                const promises = urls.map(async (url) => {
                     try {
-                        const response = await fetch(url);
-                        if (!response.ok) throw new Error(`Fallo al descargar: ${url}`);
-                        await cache.put(url, response);
+                        // **FIX**: Crear una request en modo 'cors' para evitar bloqueos
+                        const request = new Request(url, { mode: 'cors' });
+                        const response = await fetch(request);
+                        if (!response.ok) throw new Error(`Failed to fetch: ${url} with status ${response.status}`);
+                        await cache.put(request, response.clone());
                     } catch (error) {
-                        console.error(error);
-                        // Opcional: manejar reintentos o fallos
+                        console.error(`Failed to download or cache ${url}:`, error);
                     } finally {
                         loadedCount++;
-                        const progress = (loadedCount / urls.length) * 100;
-                        progressBar.style.width = `${progress}%`;
-                        progressIcon.style.left = `${progress}%`;
+                        updateProgress((loadedCount / urls.length) * 100);
                     }
                 });
                 await Promise.all(promises);
             }
 
             async function cleanOldCaches() {
+                if (!('caches' in window)) return;
                 const keys = await caches.keys();
                 const promises = keys.map(key => {
                     if (key.startsWith('ajedrez-ar-cache-v') && key !== CACHE_NAME) {
@@ -336,9 +313,13 @@
                 buttons.startGame.disabled = false;
             }));
             buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
+            
             buttons.startAR.addEventListener('click', () => {
-                navigateTo('ar');
-                setupARScene();
+                navigateTo('arEntryLoading'); // Mostrar la nueva pantalla de carga
+                setTimeout(() => { // Dar un respiro al UI antes de la carga pesada
+                    navigateTo('ar');
+                    setupARScene();
+                }, 1500);
             });
 
             // ---- Lógica de AR con WebXR ----
@@ -353,38 +334,30 @@
                     Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
                     Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
                     urls.forEach(url => {
-                        assetsContent += `<a-asset-item id="${url}" src="${url}" crossorigin="anonymous"></a-asset-item>`;
+                        assetsContent += `<a-asset-item id="${url}" src="${url}" crossorigin="anonymous" response-type="arraybuffer"></a-asset-item>`;
                     });
                 }
                 
                 arContainer.innerHTML = `
-                    <a-scene id="ar-scene" vr-mode-ui="enabled: true; enterARButtonText: ENTER AR" webxr="requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay" ar-logic>
-                        <a-assets>${assetsContent}</a-assets>
+                    <a-scene id="ar-scene" vr-mode-ui="enabled: true; enterARButtonText: INVOCAR TABLERO" webxr="requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay" ar-logic renderer="colorManagement: true">
+                        <a-assets timeout="30000">${assetsContent}</a-assets>
                         <a-camera></a-camera>
-                        <a-light type="ambient" color="#888"></a-light>
-                        <a-light type="directional" position="-1 1 1" intensity="0.6"></a-light>
+                        <a-light type="ambient" color="#FFF" intensity="0.8"></a-light>
+                        <a-light type="directional" position="-1 2 1" intensity="0.6"></a-light>
                         <a-entity id="board-container" visible="false"></a-entity>
                         <a-entity id="reticle" ar-hit-test="target: #board-container; type: plane" 
-                            geometry="primitive: ring; radiusInner: 0.1; radiusOuter: 0.15" 
-                            material="color: cyan" visible="false"></a-entity>
+                            geometry="primitive: ring; radiusInner: 0.08; radiusOuter: 0.12" 
+                            material="color: #FBBF24; shader: flat;" visible="false"></a-entity>
                     </a-scene>
                 `;
                 sceneEl = document.querySelector('#ar-scene');
+                
+                // Esperar a que la escena se cargue para evitar errores de inicialización
+                sceneEl.addEventListener('loaded', () => {
+                    console.log("A-Frame scene loaded successfully.");
+                });
             }
 
-            AFRAME.registerComponent('ar-logic', { /* ... (sin cambios) ... */ });
-            function create3DBoard(parent) { /* ... (sin cambios) ... */ }
-            function renderBoardFromFen(parent) { /* ... (sin cambios) ... */ }
-            function handleGameClick(evt) { /* ... (sin cambios) ... */ }
-            function selectPiece(entity) { /* ... (sin cambios) ... */ }
-            function clearLegalMoves() { /* ... (sin cambios) ... */ }
-            function movePiece() { /* ... (sin cambios) ... */ }
-            function makeAIMove() { /* ... (sin cambios) ... */ }
-            function updateGameStatus() { /* ... (sin cambios) ... */ }
-            function squareToPosition(square) { /* ... (sin cambios) ... */ }
-            function getPrimitive(type, color) { /* ... (sin cambios) ... */ }
-
-            // --- Se re-añaden las funciones de lógica del juego para mantener la funcionalidad ---
             AFRAME.registerComponent('ar-logic', {
                 init: function() {
                     const sceneEl = this.el;
@@ -403,7 +376,7 @@
                     });
                     reticle.addEventListener('ar-hit-test-achieved', () => {
                         reticle.setAttribute('visible', true);
-                        if (!this.boardPlaced) arInstructionsText.textContent = "Toca la pantalla para invocar el tablero.";
+                        if (!this.boardPlaced) arInstructionsText.textContent = "Toca para materializar el tablero.";
                     });
                     reticle.addEventListener('ar-hit-test-lost', () => {
                         reticle.setAttribute('visible', false);
@@ -518,7 +491,7 @@
                     const pos = squareToPosition(move.to);
                     const marker = document.createElement('a-cylinder');
                     marker.setAttribute('radius', '0.03'); marker.setAttribute('height', '0.005');
-                    marker.setAttribute('material', 'color: green; opacity: 0.6');
+                    marker.setAttribute('material', 'color: #10B981; opacity: 0.6');
                     marker.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
                     marker.dataset.square = move.to;
                     marker.classList.add('legal-move-marker');
@@ -583,7 +556,6 @@
     </script>
 </body>
 </html>
-
 
 
 
