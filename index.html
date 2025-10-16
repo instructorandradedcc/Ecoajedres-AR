@@ -99,9 +99,9 @@
     </div>
 
     <div id="ar-entry-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
-        <h2 class="text-4xl font-bold mb-4 text-amber-300">Abriendo el Portal...</h2>
+        <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Abriendo el Portal...</h2>
         <div class="text-8xl mb-6 pulsing-icon">♖</div>
-        <p class="text-stone-300 max-w-xl">Prepara tu vista mágica. Puede que necesites conceder permiso para usarla.</p>
+        <p id="ar-loading-status-text" class="text-stone-300 max-w-xl">Cargando artefactos mágicos, por favor espera...</p>
     </div>
 
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
@@ -117,7 +117,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.5.0"; // Versión con fix de registro de componente y cache-busting
+            const APP_VERSION = "2.6.0"; // Versión con CDN de jsDelivr y gestor de carga de assets
             const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
             let game = new Chess();
@@ -157,6 +157,7 @@
             const loadingText = document.getElementById('loading-text');
             const progressBar = document.getElementById('progress-bar');
             const progressIcon = document.getElementById('progress-icon');
+            const arLoadingStatusText = document.getElementById('ar-loading-status-text');
             
             let selectedSet = null;
             let selectedBoard = null;
@@ -165,10 +166,11 @@
             
             versionDisplay.textContent = `v${APP_VERSION}`;
             
+            // **FIX 1: Using jsDelivr CDN for reliable asset hosting**
             const assetMap = {
                 'harry-potter': {
-                    w: { p: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Gryffindor.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02' }, b: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.02 0.02 0.02' }, k: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/King_Dumbledore.glb', scale: '0.02 0.02 0.02' } },
-                    b: { p: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Sytherin.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby2.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter_Hollow.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: 'https://raw.githack.com/instructorandradedcc/Ecoajedres-AR/main/King_Voldemort.glb', scale: '0.02 0.02 0.02' } }
+                    w: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Gryffindor.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Dumbledore.glb', scale: '0.02 0.02 0.02' } },
+                    b: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Sytherin.glb', scale: '0.02 0.02 0.02' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby2.glb', scale: '0.02 0.02 0.02' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter_Hollow.glb', scale: '0.02 0.02 0.02' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Voldemort.glb', scale: '0.02 0.02 0.02' } }
                 }
             };
 
@@ -220,7 +222,7 @@
                     const cache = await caches.open(CACHE_NAME);
                     const urls = getAllAssetUrls();
                     for (const url of urls) {
-                        const response = await cache.match(`${url}?v=${APP_VERSION}`); // Check for versioned URL
+                        const response = await cache.match(url);
                         if (!response || !response.ok) return false;
                     }
                     return true;
@@ -246,15 +248,13 @@
                 let loadedCount = 0;
                 
                 const promises = urls.map(async (url) => {
-                    // **FIX 2**: Add a unique query parameter to bust the cache
-                    const versionedUrl = `${url}?v=${APP_VERSION}`;
                     try {
-                        const request = new Request(versionedUrl, { mode: 'cors' });
+                        const request = new Request(url, { mode: 'cors' });
                         const response = await fetch(request);
-                        if (!response.ok) throw new Error(`Failed to fetch: ${versionedUrl}`);
+                        if (!response.ok) throw new Error(`Failed to fetch: ${url}`);
                         await cache.put(request, response.clone());
                     } catch (error) {
-                        console.error(`Failed to download or cache ${versionedUrl}:`, error);
+                        console.error(`Failed to download or cache ${url}:`, error);
                     } finally {
                         loadedCount++;
                         updateProgress((loadedCount / urls.length) * 100);
@@ -310,7 +310,7 @@
                 setTimeout(() => {
                     navigateTo('ar');
                     setupARScene();
-                }, 1500);
+                }, 500); // Reduced delay
             });
 
             function setupARScene() {
@@ -321,14 +321,13 @@
                 let assetsContent = '';
                 if (assetMap[selectedSet]) {
                     getAllAssetUrls().forEach(url => {
-                        const versionedUrl = `${url}?v=${APP_VERSION}`;
-                        assetsContent += `<a-asset-item id="${versionedUrl}" src="${versionedUrl}" crossorigin="anonymous" response-type="arraybuffer"></a-asset-item>`;
+                        assetsContent += `<a-asset-item id="${url}" src="${url}" crossorigin="anonymous" response-type="arraybuffer"></a-asset-item>`;
                     });
                 }
                 
                 arContainer.innerHTML = `
                     <a-scene id="ar-scene" 
-                        vr-mode-ui="enabled: true; enterARButtonText: INVOCAR TABLERO" 
+                        vr-mode-ui="enabled: false; enterARButtonText: INVOCAR TABLERO" 
                         webxr="requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay" 
                         renderer="colorManagement: true" 
                         loading-screen="dotsColor: white; backgroundColor: black">
@@ -343,9 +342,23 @@
                     </a-scene>
                 `;
                 sceneEl = document.querySelector('#ar-scene');
+                manageARAssetLoading();
+            }
+            
+            // **FIX 2: New function to manage asset loading before enabling AR button**
+            function manageARAssetLoading() {
+                const assetsEl = sceneEl.querySelector('a-assets');
+                assetsEl.addEventListener('loaded', () => {
+                    console.log("All AR assets loaded successfully!");
+                    arLoadingStatusText.textContent = "¡Portal listo! Presiona el botón para invocar.";
+                    sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
+                });
+                assetsEl.addEventListener('timeout', () => {
+                    console.error("AR assets timed out.");
+                    arLoadingStatusText.textContent = "Error: No se pudieron cargar los artefactos mágicos. Revisa tu conexión.";
+                });
             }
 
-            // **FIX 1**: MOVED THE SINGLE ar-logic REGISTRATION HERE, OUTSIDE ANY OTHER FUNCTION
             AFRAME.registerComponent('ar-logic', {
                 init: function() {
                     const sceneEl = this.el;
@@ -354,6 +367,7 @@
                     this.boardPlaced = false;
                     sceneEl.addEventListener('enter-vr', () => {
                         if (sceneEl.is('ar-mode')) {
+                            navigateTo('ar'); // Ensure we are on the AR screen
                             arInstructionsUI.classList.remove('hidden');
                             buttons.exitAR.style.display = 'block';
                         }
@@ -420,8 +434,7 @@
                         pieceEl.dataset.square = piece.square;
                         if (assetMap[selectedSet]?.[piece.color]?.[piece.type]) {
                             const modelData = assetMap[selectedSet][piece.color][piece.type];
-                            const versionedUrl = `${modelData.url}?v=${APP_VERSION}`;
-                            pieceEl.setAttribute('gltf-model', `#${versionedUrl}`);
+                            pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
                             pieceEl.setAttribute('scale', modelData.scale);
                             if(modelData.rotation) pieceEl.setAttribute('rotation', modelData.rotation);
                         } else {
@@ -538,7 +551,6 @@
     </script>
 </body>
 </html>
-
 
 
 
