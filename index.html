@@ -46,22 +46,9 @@
     
     <div id="initial-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
         <h2 id="loading-title" class="text-4xl font-bold mb-4 text-amber-300">Preparando el Campo de Batalla</h2>
-        <div id="welcome-box" class="bg-indigo-50 border-l-4 border-indigo-500 text-indigo-700 p-4 my-6 max-w-lg" role="alert">
-            <p class="font-bold">¡Bienvenido, Mago!</p>
-            <p id="welcome-text" class="mt-2">Comprobando si tus artefactos mágicos están listos...</p>
-        </div>
-        <div id="loading-controls" class="mt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
-             <button id="download-assets-btn" class="bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition duration-300 text-lg shadow-md w-full sm:w-auto flex justify-center items-center hidden">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                Descargar Recursos Mágicos
-            </button>
-            <button id="continue-to-selection-btn" class="bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-600 transition duration-300 text-lg shadow-md w-full sm:w-auto hidden">
-                Continuar
-            </button>
-        </div>
-        <div id="loading-status" class="mt-6 hidden w-full max-w-lg">
-            <div class="flex justify-center items-center"><div class="loader"></div></div>
-            <p id="loading-text" class="text-center text-stone-300 mt-2">Iniciando...</p>
+        <div id="loading-status" class="mt-6 w-full max-w-lg">
+            <div class="flex justify-center items-center mb-4"><div class="loader"></div></div>
+            <p id="loading-text" class="text-center text-stone-300 mt-2 text-lg">Comprobando artefactos...</p>
             <div class="w-full bg-gray-700 rounded-full h-2.5 mt-2">
                 <div id="loading-progress-bar" class="bg-amber-400 h-2.5 rounded-full" style="width: 0%"></div>
             </div>
@@ -131,7 +118,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.7.0"; // Versión con carga manual de assets y caché robusta
+            const APP_VERSION = "2.8.0"; // Versión con flujo de carga unificado
             const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
             let game = new Chess();
@@ -154,8 +141,6 @@
             };
             const buttons = {
                 start: document.getElementById('start-btn'),
-                downloadAssets: document.getElementById('download-assets-btn'),
-                continueToSelection: document.getElementById('continue-to-selection-btn'),
                 clearCache: document.getElementById('clear-cache-btn'),
                 continueSet: document.getElementById('continue-set-btn'),
                 continueBoard: document.getElementById('continue-board-btn'),
@@ -207,8 +192,6 @@
                 initializeApp();
             });
             
-            buttons.downloadAssets.addEventListener('click', downloadAndCacheAssets);
-            buttons.continueToSelection.addEventListener('click', () => navigateTo('selection'));
             buttons.clearCache.addEventListener('click', async () => {
                 try {
                     const keys = await caches.keys();
@@ -223,16 +206,21 @@
             });
 
             async function initializeApp() {
-                const welcomeText = document.getElementById('welcome-text');
+                const loadingText = document.getElementById('loading-text');
+                const progressBar = document.getElementById('loading-progress-bar');
+                
                 const assetsInCache = await checkCache();
                 if (assetsInCache) {
-                    welcomeText.textContent = "¡Tus artefactos ya están en la recámara! Puedes continuar.";
-                    buttons.downloadAssets.classList.add('hidden');
-                    buttons.continueToSelection.classList.remove('hidden');
+                    loadingText.textContent = "¡Artefactos encontrados! Iniciando el duelo...";
+                    progressBar.style.transition = 'width 0.5s ease';
+                    progressBar.style.width = '100%';
+                    setTimeout(() => {
+                        navigateTo('selection');
+                    }, 1500);
                 } else {
-                    welcomeText.textContent = "Para comenzar el duelo, necesitas descargar los artefactos mágicos (modelos 3D). Se guardarán para futuras partidas.";
-                    buttons.downloadAssets.classList.remove('hidden');
-                    buttons.continueToSelection.classList.add('hidden');
+                    loadingText.textContent = "Se necesitan nuevos artefactos. Iniciando descarga...";
+                    progressBar.style.transition = 'width 0.2s linear';
+                    await downloadAndCacheAssets();
                 }
             }
 
@@ -275,7 +263,6 @@
                 const progressBar = document.getElementById('loading-progress-bar');
                 
                 loadingStatusDiv.classList.remove('hidden');
-                buttons.downloadAssets.disabled = true;
 
                 if (!('caches' in window)) {
                     loadingText.textContent = "La API de Caché no está disponible. No se pueden guardar los modelos.";
@@ -303,7 +290,6 @@
 
                 loadingText.textContent = "¡Todos los artefactos han sido descargados y guardados!";
                 setTimeout(() => {
-                    loadingStatusDiv.classList.add('hidden');
                     navigateTo('selection');
                 }, 1500);
             }
@@ -582,8 +568,6 @@
     </script>
 </body>
 </html>
-
-
 
 
 
