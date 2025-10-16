@@ -1,591 +1,488 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Ajedrez AR (Sin Marcadores)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Propuesta de Juego - Carga y Galería</title>
+    
+    <!-- Tailwind CSS para un diseño moderno y responsivo -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    
+    <!-- Favicon de la aplicación -->
+    <link rel="icon" href="https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/favicon.ico" type="image/x-icon">
+    
+    <!-- Google Fonts para una tipografía agradable -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* Estilos generales */
+        /* Estilos Generales */
         body {
-            overscroll-behavior: none; /* Previene "pull-to-refresh" */
+            font-family: 'Inter', sans-serif;
+            background-color: #0a192f; /* Un azul marino oscuro más profesional */
         }
-        /* MEJORA: Se permite el scroll por defecto y se restringe solo en modo AR */
-        html.ar-active, body.ar-active {
-            overflow: hidden;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            cursor: pointer;
         }
-        .screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            min-height: 100%; /* Permite que el contenido crezca */
-            overflow-y: auto; /* Permite scroll vertical si es necesario */
-            transition: opacity 0.5s ease-in-out;
-            z-index: 10;
+        .nav-link:hover {
+            color: #64ffda; /* Color cian para resaltar */
         }
-        .screen.active { display: flex; }
-        .selection-card, .board-card, .color-swatch, .mode-card {
-            transition: all 0.3s ease;
-            border: 4px solid transparent;
+        .nav-link.active {
+            color: #64ffda;
+            border-bottom: 2px solid #64ffda;
         }
-        .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected {
-            border-color: #FBBF24;
-            transform: scale(1.05);
+        /* Estilos para el visor de imágenes */
+        #image-viewer {
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+            pointer-events: none;
         }
-        #ar-container {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            overflow: hidden;
+        #image-viewer.open {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: all;
         }
-        .version {
-            position: fixed; bottom: 10px; right: 10px;
-            color: #9ca3af; font-size: 0.8rem; z-index: 100;
+        #viewer-img {
+            cursor: grab;
+            transition: transform 0.2s ease-out;
         }
-        .game-status {
-            position: fixed; top: 20px; left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0,0,0,0.7); color: white;
-            padding: 10px 20px; border-radius: 20px;
-            z-index: 100; font-size: 1.2rem; display: none;
+        #viewer-img.dragging {
+            cursor: grabbing;
         }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
+        /* Animación del Caballero en la Barra de Carga */
+        @keyframes knight-bob {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #ar-instructions-ui {
-            position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9991; display: flex;
-            justify-content: center; align-items: center;
-            pointer-events: none; 
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 1.2rem;
-            transition: opacity 0.3s;
+        #knight-icon {
+            animation: knight-bob 1s ease-in-out infinite;
+            transition: left 0.5s ease-out;
         }
-        #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
-<body class="bg-stone-900 text-white">
-    <div id="app-version" class="version"></div>
-    <div id="game-status" class="game-status"></div>
+<body class="bg-gray-900 text-gray-300">
 
-    <!-- Pantalla de Bienvenida -->
-    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+AR');">
-        <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Ajedrez en Realidad Aumentada</h1>
-        <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Coloca un tablero de ajedrez 3D en tu propio entorno.</p>
-        <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar</button>
-    </div>
-
-    <!-- Pantalla de Selección de Set de Piezas -->
-    <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10">
-            <h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Set</h2>
-            <p class="text-stone-300">Elige el estilo de piezas para tu partida.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧙‍♂️</div>
-                <h3 class="text-2xl font-semibold mb-2">Wizard's Chess</h3>
-                <p class="text-stone-400">Piezas inspiradas en el ajedrez mágico.</p>
-            </div>
-            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♜</span></div>
-                <h3 class="text-2xl font-semibold mb-2">Futurista</h3>
-                <p class="text-stone-400">Diseño moderno y disruptivo (primitivas).</p>
-            </div>
-        </div>
-        <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-    </div>
-
-    <!-- Pantalla de Selección de Tablero y Colores -->
-    <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10">
-             <h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2>
-             <p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p>
-        </div>
-        <div class="max-w-4xl w-full">
-            <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-wood"><img src="https://placehold.co/400x300/854d0e/fefce8?text=Madera+Clásica" class="w-full h-40 object-cover rounded-md mb-3" alt="Tablero de madera clásica"><p>Madera Clásica</p></div>
-                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-marble"><img src="https://placehold.co/400x300/d1d5db/1f2937?text=Mármol+Elegante" class="w-full h-40 object-cover rounded-md mb-3" alt="Tablero de mármol elegante"><p>Mármol Elegante</p></div>
-            </div>
-             <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige el color de tus piezas</h3>
-            <div class="flex justify-center gap-6">
-                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-white" data-color="w"></div>
-                <div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-gray-800" data-color="b"></div>
+    <!-- Encabezado de Navegación (se muestra después de la carga) -->
+    <nav id="main-nav" class="bg-gray-900/80 backdrop-blur-sm shadow-md fixed top-0 w-full z-20 hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <img src="https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/logofundacion.jpg" alt="Logo" class="h-10 w-10 rounded-full">
+                    <span class="text-white font-semibold text-xl ml-3">Propuesta de Juego</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a id="nav-inicio" class="nav-link px-3 py-2 text-sm font-medium">Inicio</a>
+                        <a id="nav-galeria" class="nav-link px-3 py-2 text-sm font-medium">Galería del Juego</a>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-gray-800 inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                        <span class="sr-only">Abrir menú principal</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
             </div>
         </div>
-        <button id="continue-board-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-        <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
-    </div>
-
-    <!-- Pantalla de Selección de Modo de Juego -->
-    <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10">
-             <h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Juego</h2>
-             <p class="text-stone-300">¿Cómo quieres jugar?</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div>
-                <h3 class="text-2xl font-semibold">Jugador vs. Máquina</h3>
-            </div>
-            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pvp">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧑‍🤝‍🧑</div>
-                <h3 class="text-2xl font-semibold">Jugador vs. Jugador</h3>
+        <!-- Mobile menu -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a id="mobile-nav-inicio" class="text-cyan-400 bg-gray-900 block px-3 py-2 rounded-md text-base font-medium">Inicio</a>
+                <a id="mobile-nav-galeria" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Galería del Juego</a>
             </div>
         </div>
-        <button id="start-game-btn" class="mt-12 bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-        <button id="back-to-board-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
-    </div>
-
-    <!-- Pantalla de instrucciones para AR sin marcadores -->
-    <div id="instructions-screen" class="screen flex-col justify-center items-center text-center p-8 bg-stone-800">
-        <h2 class="text-4xl font-bold mb-4 text-amber-300">Prepara tu Espacio de Juego</h2>
-        <p class="text-stone-300 max-w-xl mb-6">La Realidad Aumentada necesita detectar una superficie plana y bien iluminada.</p>
-        <div class="text-6xl mb-4">📱</div>
-        <p class="text-stone-300 max-w-xl mb-8">Apunta con tu cámara a una mesa o al suelo, muévela lentamente hasta que veas un retículo, y luego toca la pantalla para colocar el tablero.</p>
-        <!-- MEJORA: Se cambia el texto del botón -->
-        <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Iniciar Juego</button>
-        <button id="back-to-mode-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
-    </div>
-
-    <!-- Pantalla de AR -->
-    <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
-        <div id="ar-container"></div> <!-- Contenedor principal de A-Frame -->
-        <div id="ar-ui-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Salir</button>
-            <div id="ar-instructions-ui" class="hidden">
-                <p id="ar-instructions-text">Mueve tu dispositivo para encontrar una superficie.</p>
-            </div>
-        </div>
-    </div>
+    </nav>
     
-    <!-- MEJORA: Overlay de carga más profesional -->
-    <div id="loading-overlay" class="fixed inset-0 bg-stone-900 bg-opacity-95 text-amber-200 flex flex-col items-center justify-center" style="display: none; z-index: 50;">
-        <div class="loader mb-4"></div>
-        <p id="loading-message" class="text-lg text-white">Cargando...</p>
+    <!-- SECCIÓN DE CARGA DE RECURSOS -->
+    <section id="loading-section" class="flex items-center justify-center min-h-screen">
+        <div class="max-w-2xl w-full mx-auto p-8 text-center bg-gray-800 rounded-2xl shadow-lg m-4">
+            <h1 class="text-4xl font-bold text-cyan-400 mb-4">Preparando el Campo de Batalla</h1>
+            <p id="loading-text" class="text-lg text-gray-300 mb-8 leading-relaxed">
+                Verificando componentes del juego...
+            </p>
+            <!-- Barra de Progreso Temática -->
+            <div id="progress-container" class="w-full max-w-md mx-auto hidden">
+                <div class="relative pt-1">
+                    <div class="flex mb-2 items-center justify-between text-xs">
+                        <div>
+                            <span class="font-semibold inline-block text-cyan-400">
+                                Castillo Aliado
+                            </span>
+                        </div>
+                        <div class="text-right">
+                             <span class="font-semibold inline-block text-red-400">
+                                Fortaleza Enemiga
+                            </span>
+                        </div>
+                    </div>
+                    <div class="overflow-hidden h-4 mb-4 text-xs flex rounded bg-gray-700 border border-gray-600">
+                        <div id="loading-progress-bar" style="width: 0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
+                    </div>
+                    <!-- Icono del Caballero -->
+                    <div id="knight-icon" class="absolute left-0 top-full -mt-1 w-8 h-8" style="left: 0%;">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" class="w-full h-full drop-shadow-lg">
+                            <path d="M5.562 15.344l1.25-1.25a1.25 1.25 0 0 1 1.768 0l2.437 2.438 2.204-4.85c.216-.475.66-.804 1.18-.882l3.125-.468a.5.5 0 0 1 .53.645l-1 3a.5.5 0 0 1-.645.34l-2.03-.304-2.812 6.187a1.25 1.25 0 0 1-2.242 0L5.563 17.11a1.25 1.25 0 0 1 0-1.768zM14.5 5.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-2 2.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+             <div class="mt-12">
+                <button id="clear-cache-btn" class="text-xs bg-gray-700 text-gray-400 font-bold py-1 px-3 rounded-md hover:bg-red-700 hover:text-white transition duration-300 shadow-sm">
+                    Limpiar Caché
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN DE INICIO (APK) -->
+    <section id="home-section" class="hidden items-center justify-center min-h-screen pt-16">
+        <div class="max-w-2xl w-full mx-auto p-8 text-center bg-gray-800 rounded-2xl shadow-lg m-4">
+            <header class="mb-8">
+                <img src="https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/logofundacion.jpg" alt="Logo de la Fundación" class="w-32 h-32 mx-auto rounded-full object-cover shadow-md border-4 border-cyan-500">
+            </header>
+            <main>
+                <h1 class="text-4xl font-bold text-cyan-400 mb-4">¡Versión de Prueba Disponible!</h1>
+                <p class="text-lg text-gray-300 mb-8 leading-relaxed">
+                    Puedes probar una versión preliminar del juego descargando el APK directamente en tu dispositivo móvil.
+                </p>
+                <a href="https://github.com/instructorandradedcc/propuesta-AR/raw/main/Propuesta_Salud_AR_v1.0.0.apk" 
+                   class="inline-block bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold py-4 px-8 rounded-lg text-xl transition-transform duration-300 transform hover:scale-105 shadow-lg"
+                   download>
+                    Descargar APK de Prueba
+                </a>
+                <p class="text-md text-gray-400 mt-8">
+                    Usa el APK con los personajes y objetos que encontrarás en la 
+                    <a id="link-a-galeria" class="text-cyan-400 hover:underline font-semibold cursor-pointer">siguiente página</a>.
+                </p>
+                <p class="text-sm text-gray-500 mt-6">
+                    Recuerda habilitar "Instalar desde fuentes desconocidas" en los ajustes de tu celular.
+                </p>
+                <div class="mt-10">
+                    <button id="btn-siguiente-pagina"
+                       class="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg transition-transform duration-300 transform hover:scale-105 shadow-lg">
+                        Ver Galería &rarr;
+                    </button>
+                </div>
+            </main>
+        </div>
+    </section>
+
+    <!-- SECCIÓN DE GALERÍA -->
+    <section id="gallery-section" class="hidden container mx-auto px-4 py-24">
+        <h1 class="text-4xl font-bold text-center text-cyan-400 mb-4">Galería del Juego</h1>
+        <p class="text-center text-lg text-gray-400 mb-12">Haz clic en cualquier imagen para verla en detalle. Estos son los personajes y objetos que encontrarás en el juego.</p>
+        <div id="image-gallery" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Las imágenes se insertarán aquí con JS -->
+        </div>
+    </section>
+
+    <!-- Visor de Imágenes a Pantalla Completa -->
+    <div id="image-viewer" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <button id="close-viewer" class="absolute top-5 right-5 text-white text-4xl hover:text-cyan-400 transition">&times;</button>
+        <button id="prev-img" class="absolute left-5 text-white text-5xl hover:text-cyan-400 transition">&#8249;</button>
+        <button id="next-img" class="absolute right-5 text-white text-5xl hover:text-cyan-400 transition">&#8250;</button>
+        <div class="w-full h-full flex items-center justify-center overflow-hidden">
+             <img id="viewer-img" src="" alt="Vista ampliada" class="max-w-[90%] max-h-[90%] object-contain">
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.1.0"; // Versión por mejoras de UX y AR
+            const APP_VERSION = '1.1'; // ¡Incrementa esta versión para forzar una actualización!
+            const CACHE_NAME = `game-assets-cache-v${APP_VERSION}`;
+            const imageUrls = [
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/cabeza1.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/corazon.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/dedo-mano.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/dedo.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/hueso-columna.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/huesosmano.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/mano-iz-protesis.png',
+                'https://raw.githubusercontent.com/instructorandradedcc/propuesta-AR/main/asetss/imagenes/protesis-mano-brazo.png'
+            ];
 
-            let game = new Chess();
-            let gameState = 'IDLE';
-            let selectedPieceEntity = null;
-            let legalMoveEntities = [];
-            let playerColor = 'w';
-            let gameMode = 'pva';
-            
-            const screens = {
-                welcome: document.getElementById('welcome-screen'),
-                selection: document.getElementById('selection-screen'),
-                boardSelection: document.getElementById('board-selection-screen'),
-                gameMode: document.getElementById('game-mode-screen'),
-                instructions: document.getElementById('instructions-screen'),
-                ar: document.getElementById('ar-screen'),
-            };
-            const buttons = {
-                start: document.getElementById('start-btn'),
-                continueSet: document.getElementById('continue-set-btn'),
-                continueBoard: document.getElementById('continue-board-btn'),
-                startGame: document.getElementById('start-game-btn'),
-                startAR: document.getElementById('start-ar-btn'),
-                backToSet: document.getElementById('back-to-set-btn'),
-                backToBoardSelect: document.getElementById('back-to-board-select-btn'),
-                backToModeSelect: document.getElementById('back-to-mode-select-btn'),
-                exitAR: document.getElementById('exit-ar-btn'),
-            };
-            
-            const arContainer = document.getElementById('ar-container');
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const gameStatusEl = document.getElementById('game-status');
-            const versionDisplay = document.getElementById('app-version');
-            const arInstructionsUI = document.getElementById('ar-instructions-ui');
-            const arInstructionsText = document.getElementById('ar-instructions-text');
-            
-            let selectedSet = null;
-            let selectedBoard = null;
-            let sceneEl = null;
-            let boardPlaced = false;
-            
-            versionDisplay.textContent = `v${APP_VERSION}`;
-            
-            const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
+            // --- ELEMENTOS DEL DOM ---
+            const loadingSection = document.getElementById('loading-section');
+            const homeSection = document.getElementById('home-section');
+            const gallerySection = document.getElementById('gallery-section');
+            const mainNav = document.getElementById('main-nav');
+            const clearCacheBtn = document.getElementById('clear-cache-btn');
+            const loadingText = document.getElementById('loading-text');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('loading-progress-bar');
+            const knightIcon = document.getElementById('knight-icon');
 
-            const assetMap = {
-                'harry-potter': {
-                    w: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Gryffindor.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Dumbledore.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, },
-                    b: { p: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Pawn_Sytherin.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, r: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Rook_Dobby2.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, n: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Knight_RWeasley.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Bishop_HPotter_Hollow.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, q: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/Queen_Hermione.glb', scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: 'https://cdn.jsdelivr.net/gh/instructorandradedcc/Ecoajedres-AR@main/King_Voldemort.glb', scale: '0.02 0.02 0.02', rotation: '0 0 0' }, }
-                }
-            };
+            // --- LÓGICA DE CARGA Y CACHÉ ---
+            async function loadAndCacheAssets() {
+                progressContainer.classList.remove('hidden');
+                clearCacheBtn.disabled = true;
+                progressBar.style.width = '0%';
+                knightIcon.style.left = '0%';
+                let loadedCount = 0;
 
-            // ---- Navigation Logic ----
-            function navigateTo(screenName) {
-                if (sceneEl) {
-                    sceneEl.pause();
-                    // MEJORA: Asegurarse de terminar la sesión XR al salir
-                    if (sceneEl.is('vr-mode')) {
-                        sceneEl.exitVR();
+                try {
+                    // Limpiar cachés de versiones antiguas para forzar la actualización.
+                    // Si cambias APP_VERSION, este código eliminará la caché vieja.
+                    const keys = await caches.keys();
+                    for (const key of keys) {
+                        if (key !== CACHE_NAME && key.startsWith('game-assets-cache')) {
+                            await caches.delete(key);
+                        }
                     }
-                    arContainer.innerHTML = '';
-                    sceneEl = null;
+
+                    const cache = await caches.open(CACHE_NAME);
+                    for (const url of imageUrls) {
+                        loadingText.textContent = `Descargando componente ${loadedCount + 1} de ${imageUrls.length}...`;
+                        const response = await fetch(url, { mode: 'cors' });
+                        if (!response.ok) throw new Error(`Fallo al descargar: ${url}`);
+                        await cache.put(url, response);
+                        loadedCount++;
+                        const percentage = (loadedCount / imageUrls.length) * 100;
+                        progressBar.style.width = `${percentage}%`;
+                        knightIcon.style.left = `calc(${percentage}% - 16px)`; // Ajustar posición del ícono
+                    }
+                    loadingText.textContent = '¡Componentes listos!';
+                    setTimeout(initializeApp, 1000);
+                } catch (error) {
+                    loadingText.textContent = 'Error al descargar componentes. Intenta de nuevo.';
+                    progressBar.style.backgroundColor = 'red';
+                    console.error('Error en la carga:', error);
+                    clearCacheBtn.disabled = false;
                 }
-                document.documentElement.classList.remove('ar-active');
-                document.body.classList.remove('ar-active');
-                Object.values(screens).forEach(s => s.classList.remove('active'));
-                screens[screenName].classList.add('active');
             }
 
-            buttons.start.addEventListener('click', () => navigateTo('selection'));
-            document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
-                document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                selectedSet = e.currentTarget.dataset.set;
-                buttons.continueSet.disabled = false;
-            }));
-            buttons.continueSet.addEventListener('click', () => navigateTo('boardSelection'));
-            buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
-            buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
-            buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
-            buttons.exitAR.addEventListener('click', () => { game.reset(); navigateTo('gameMode'); });
+            async function clearCacheAndReload() {
+                try {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(key => {
+                         if (key.startsWith('game-assets-cache')) {
+                            return caches.delete(key);
+                        }
+                    }));
+                    alert('Caché limpiada. La página se recargará.');
+                    window.location.reload();
+                } catch (error) {
+                    alert('Error al limpiar la caché.');
+                    console.error('Error al limpiar caché:', error);
+                }
+            }
+            
+            async function checkCache() {
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    const cachedResponses = await Promise.all(imageUrls.map(url => cache.match(url)));
+                    // Verifica que CADA asset esté en la caché. Si añades un nuevo asset a la lista, 
+                    // esta función devolverá falso y forzará una nueva descarga.
+                    return cachedResponses.every(response => response && response.ok);
+                } catch (error) {
+                    console.warn("No se pudo verificar la caché:", error);
+                    return false;
+                }
+            }
 
-            document.querySelectorAll('.board-card').forEach(card => card.addEventListener('click', (e) => {
-                document.querySelectorAll('.board-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                selectedBoard = e.currentTarget.dataset.board;
-                if (playerColor) buttons.continueBoard.disabled = false;
-            }));
-             document.querySelectorAll('.color-swatch').forEach(swatch => swatch.addEventListener('click', (e) => {
-                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                playerColor = e.currentTarget.dataset.color;
-                if (selectedBoard) buttons.continueBoard.disabled = false;
-            }));
-            buttons.continueBoard.addEventListener('click', () => navigateTo('gameMode'));
-            document.querySelectorAll('.mode-card').forEach(card => card.addEventListener('click', (e) => {
-                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                gameMode = e.currentTarget.dataset.mode;
-                buttons.startGame.disabled = false;
-            }));
+            // --- INICIALIZACIÓN DE LA APP ---
+            function initializeApp() {
+                loadingSection.classList.add('hidden');
+                mainNav.classList.remove('hidden');
+                showHome();
+                populateGallery();
+            }
 
-            buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
-            buttons.startAR.addEventListener('click', async () => {
-                navigateTo('ar');
-                showLoading(true, "Cargando recursos del juego...");
-                await preloadARAssets();
-                showLoading(true, "Preparando la experiencia AR...");
-                setupARScene();
+            async function startup() {
+                // Paso 1: Revisar si los componentes de la versión actual ya están en caché.
+                const assetsInCache = await checkCache();
+                
+                // Paso 2: Decidir la acción basada en si los assets están cacheados.
+                if (assetsInCache) {
+                    // Si ya están descargados, inicia el juego directamente.
+                    loadingText.textContent = "¡Componentes del juego encontrados! Iniciando partida...";
+                    setTimeout(initializeApp, 1500);
+                } else {
+                    // Si no están descargados (o si la APP_VERSION cambió), los descarga automáticamente.
+                    loadingText.textContent = "Se necesitan nuevos componentes. Iniciando descarga...";
+                    setTimeout(loadAndCacheAssets, 1000);
+                }
+            }
+            
+            clearCacheBtn.addEventListener('click', clearCacheAndReload);
+            
+            // Inicia el proceso de verificación en cuanto la página carga.
+            startup();
+
+            // --- MANEJO DE VISTAS (PÁGINAS) ---
+            const navInicio = document.getElementById('nav-inicio');
+            const navGaleria = document.getElementById('nav-galeria');
+            const mobileNavInicio = document.getElementById('mobile-nav-inicio');
+            const mobileNavGaleria = document.getElementById('mobile-nav-galeria');
+
+            function showHome() {
+                homeSection.classList.remove('hidden');
+                homeSection.classList.add('flex');
+                gallerySection.classList.add('hidden');
+                navInicio.classList.add('active');
+                navGaleria.classList.remove('active');
+                mobileNavInicio.classList.add('text-cyan-400', 'bg-gray-900');
+                mobileNavGaleria.classList.remove('text-cyan-400', 'bg-gray-900');
+                window.scrollTo(0, 0);
+            }
+
+            function showGallery() {
+                homeSection.classList.add('hidden');
+                homeSection.classList.remove('flex');
+                gallerySection.classList.remove('hidden');
+                navInicio.classList.remove('active');
+                navGaleria.classList.add('active');
+                mobileNavInicio.classList.remove('text-cyan-400', 'bg-gray-900');
+                mobileNavGaleria.classList.add('text-cyan-400', 'bg-gray-900');
+                window.scrollTo(0, 0);
+            }
+            
+            // Eventos de navegación
+            navInicio.addEventListener('click', showHome);
+            navGaleria.addEventListener('click', showGallery);
+            mobileNavInicio.addEventListener('click', showHome);
+            mobileNavGaleria.addEventListener('click', showGallery);
+            document.getElementById('link-a-galeria').addEventListener('click', showGallery);
+            document.getElementById('btn-siguiente-pagina').addEventListener('click', showGallery);
+
+            // --- LÓGICA DE LA GALERÍA ---
+            const gallery = document.getElementById('image-gallery');
+            const imageViewer = document.getElementById('image-viewer');
+            const viewerImg = document.getElementById('viewer-img');
+            
+            let currentIndex = 0;
+            let galleryPopulated = false;
+
+            function populateGallery() {
+                if(galleryPopulated) return;
+                imageUrls.forEach((url, index) => {
+                    const galleryItem = document.createElement('div');
+                    galleryItem.className = 'bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-transform duration-300 cursor-pointer';
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = `Imagen de galería ${index + 1}`;
+                    img.className = 'w-full h-48 object-cover';
+                    img.dataset.index = index;
+                    galleryItem.appendChild(img);
+                    gallery.appendChild(galleryItem);
+                });
+                galleryPopulated = true;
+            }
+
+            // --- Funcionalidad del Visor ---
+            const openViewer = (index) => {
+                currentIndex = parseInt(index);
+                viewerImg.src = imageUrls[currentIndex];
+                resetZoom();
+                imageViewer.classList.add('open');
+            };
+
+            const closeViewer = () => imageViewer.classList.remove('open');
+            const showPrevImage = () => {
+                currentIndex = (currentIndex - 1 + imageUrls.length) % imageUrls.length;
+                viewerImg.src = imageUrls[currentIndex];
+                resetZoom();
+            };
+            const showNextImage = () => {
+                currentIndex = (currentIndex + 1) % imageUrls.length;
+                viewerImg.src = imageUrls[currentIndex];
+                resetZoom();
+            };
+            
+            // Event Listeners del Visor
+            gallery.addEventListener('click', (e) => e.target.tagName === 'IMG' && openViewer(e.target.dataset.index));
+            document.getElementById('close-viewer').addEventListener('click', closeViewer);
+            document.getElementById('prev-img').addEventListener('click', showPrevImage);
+            document.getElementById('next-img').addEventListener('click', showNextImage);
+            document.addEventListener('keydown', (e) => {
+                if (imageViewer.classList.contains('open')) {
+                    if (e.key === 'Escape') closeViewer();
+                    if (e.key === 'ArrowLeft') showPrevImage();
+                    if (e.key === 'ArrowRight') showNextImage();
+                }
+            });
+            imageViewer.addEventListener('click', (e) => e.target === imageViewer && closeViewer());
+
+            // --- Funcionalidad de Zoom y Arrastre ---
+            let scale = 1, panning = false, pointX = 0, pointY = 0, start = { x: 0, y: 0 }, isRightClickDown = false;
+            const setTransform = () => viewerImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+            const resetZoom = () => { scale = 1; pointX = 0; pointY = 0; setTransform(); };
+            viewerImg.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (e.button === 2) { isRightClickDown = true; viewerImg.style.cursor = 'ns-resize'; } 
+                else { panning = true; start = { x: e.clientX - pointX, y: e.clientY - pointY }; viewerImg.classList.add('dragging'); }
+            });
+            viewerImg.addEventListener('mouseup', (e) => {
+                if(e.button === 2) { isRightClickDown = false; viewerImg.style.cursor = 'grab'; }
+                panning = false; viewerImg.classList.remove('dragging');
+            });
+            viewerImg.addEventListener('mousemove', (e) => {
+                e.preventDefault();
+                if (panning) { pointX = e.clientX - start.x; pointY = e.clientY - start.y; setTransform(); }
+            });
+            viewerImg.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (isRightClickDown || e.ctrlKey) {
+                    const xs = (e.clientX - pointX) / scale, ys = (e.clientY - pointY) / scale;
+                    scale *= (e.deltaY > 0) ? 0.9 : 1.1;
+                    pointX = e.clientX - xs * scale;
+                    pointY = e.clientY - ys * scale;
+                    setTransform();
+                }
+            });
+            viewerImg.addEventListener('contextmenu', e => e.preventDefault());
+
+            // --- Funcionalidad Táctil (Swipe y Pinch-to-Zoom) ---
+            let initialDistance = null, touchStartX = 0;
+            const getDistance = (t) => Math.hypot(t[0].pageX - t[1].pageX, t[0].pageY - t[1].pageY);
+            viewerImg.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) initialDistance = getDistance(e.touches);
+                else if (e.touches.length === 1) {
+                    touchStartX = e.touches[0].clientX;
+                    start = { x: e.touches[0].clientX - pointX, y: e.touches[0].clientY - pointY };
+                    panning = true;
+                }
+            });
+            viewerImg.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 2 && initialDistance) {
+                    scale *= getDistance(e.touches) / initialDistance;
+                    initialDistance = getDistance(e.touches);
+                    setTransform();
+                } else if (e.touches.length === 1 && panning) {
+                    pointX = e.touches[0].clientX - start.x;
+                    pointY = e.touches[0].clientY - start.y;
+                    setTransform();
+                }
+            });
+            viewerImg.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) initialDistance = null;
+                if (e.touches.length < 1) {
+                    panning = false;
+                    const swipeDist = e.changedTouches[0].clientX - touchStartX;
+                    if (Math.abs(swipeDist) > 50) swipeDist > 0 ? showPrevImage() : showNextImage();
+                }
             });
 
-            function showLoading(on, message = "") {
-                loadingOverlay.style.display = on ? 'flex' : 'none';
-                document.getElementById('loading-message').textContent = message;
-            }
-
-            async function preloadARAssets() { /* ... (sin cambios) ... */ }
-
-            // ---- Lógica de AR con WebXR ----
-            function setupARScene() {
-                document.documentElement.classList.add('ar-active');
-                document.body.classList.add('ar-active');
-                boardPlaced = false;
-
-                sceneEl = document.createElement('a-scene');
-                // MEJORA: Se habilita la UI nativa de A-Frame para entrar a AR
-                // Esto es crucial para que el navegador pida los permisos correctamente.
-                sceneEl.setAttribute('vr-mode-ui', 'enabled: true; enterARButtonSelector: #enter-ar-btn-placeholder');
-                sceneEl.setAttribute('webxr', 'requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay');
-                
-                // Assets
-                const assetsEl = document.createElement('a-assets');
-                if (assetMap[selectedSet]) {
-                    const urls = new Set();
-                    Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
-                    Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
-                    urls.forEach(url => {
-                        const assetItem = document.createElement('a-asset-item');
-                        assetItem.setAttribute('id', url);
-                        assetItem.setAttribute('src', url);
-                        assetsEl.appendChild(assetItem);
-                    });
-                }
-                sceneEl.appendChild(assetsEl);
-
-                const cameraEl = document.createElement('a-camera');
-                sceneEl.appendChild(cameraEl);
-                const light1 = document.createElement('a-light', {type: 'ambient', color: '#888'});
-                sceneEl.appendChild(light1);
-                const light2 = document.createElement('a-light', {type: 'directional', position: '-1 1 1', intensity: '0.6'});
-                sceneEl.appendChild(light2);
-
-                const boardContainer = document.createElement('a-entity');
-                boardContainer.setAttribute('id', 'board-container');
-                boardContainer.setAttribute('visible', 'false');
-                create3DBoard(boardContainer);
-                renderBoardFromFen(boardContainer);
-                sceneEl.appendChild(boardContainer);
-
-                const reticle = document.createElement('a-ring');
-                reticle.setAttribute('id', 'reticle');
-                reticle.setAttribute('ar-hit-test', 'target: #board-container; type: plane');
-                reticle.setAttribute('radius-inner', '0.1');
-                reticle.setAttribute('radius-outer', '0.15');
-                reticle.setAttribute('color', 'cyan');
-                reticle.setAttribute('visible', 'false');
-                sceneEl.appendChild(reticle);
-                
-                arContainer.appendChild(sceneEl);
-
-                sceneEl.addEventListener('loaded', () => {
-                    showLoading(false); // Ocultar "Preparando..."
-                    // A-Frame ahora mostrará su propio botón "ENTER AR"
-                });
-
-                reticle.addEventListener('ar-hit-test-achieved', () => {
-                    reticle.setAttribute('visible', 'true');
-                    if (!boardPlaced) arInstructionsText.textContent = "Toca la pantalla para colocar el tablero.";
-                });
-                reticle.addEventListener('ar-hit-test-lost', () => reticle.setAttribute('visible', 'false'));
-
-                sceneEl.addEventListener('enter-vr', () => {
-                    if (sceneEl.is('ar-mode')) {
-                        arInstructionsUI.classList.remove('hidden');
-                        buttons.exitAR.style.display = 'block';
-                        
-                        // Solo escuchamos el evento 'select' (toque en pantalla) una vez para colocar el tablero
-                        const placeBoard = () => {
-                            if (!boardPlaced && reticle.getAttribute('visible')) {
-                                boardContainer.setAttribute('visible', 'true');
-                                reticle.setAttribute('visible', 'false');
-                                reticle.removeAttribute('ar-hit-test');
-                                boardPlaced = true;
-                                arInstructionsUI.classList.add('hidden');
-                                gameStatusEl.style.display = 'block';
-                                updateGameStatus();
-                                sceneEl.removeEventListener('select', placeBoard); // Dejamos de escuchar para no colocar más tableros
-                            }
-                        };
-                        sceneEl.addEventListener('select', placeBoard);
-                    }
-                });
-                 sceneEl.addEventListener('exit-vr', () => navigateTo('gameMode'));
-
-                sceneEl.addEventListener('click', (evt) => {
-                    if (boardPlaced) handleGameClick(evt);
-                });
-            }
-
-            function create3DBoard(parent) { /* ... (sin cambios) ... */ }
-            function renderBoardFromFen(parent) { /* ... (sin cambios) ... */ }
-            function handleGameClick(evt) { /* ... (lógica de click sin cambios) ... */ }
-            function selectPiece(entity) { /* ... (lógica de selección sin cambios) ... */ }
-            function clearLegalMoves() { /* ... (lógica de limpiar movimientos sin cambios) ... */ }
-            function movePiece() { /* ... (lógica de mover pieza sin cambios) ... */ }
-            function makeAIMove() { /* ... (lógica de IA sin cambios) ... */ }
-            function updateGameStatus() { /* ... (lógica de estado sin cambios) ... */ }
-            function squareToPosition(square) { /* ... (lógica de posición sin cambios) ... */ }
-            function getPrimitive(type, color) { /* ... (lógica de primitivas sin cambios) ... */ }
-
-            // --- Se re-añaden las funciones de lógica del juego para mantener la funcionalidad ---
-            
-             function create3DBoard(parent) {
-                const boardSize = 0.6; // Tamaño ajustado para superficies de mesa
-                const squareSize = boardSize / 8;
-                const boardGroup = document.createElement('a-entity');
-                boardGroup.setAttribute('id', 'board-group');
-                const boardBase = document.createElement('a-box');
-                boardBase.setAttribute('width', boardSize + 0.04);
-                boardBase.setAttribute('height', 0.02);
-                boardBase.setAttribute('depth', boardSize + 0.04);
-                boardBase.setAttribute('color', '#4a2a15');
-                boardBase.setAttribute('position', `0 -0.01 0`);
-                boardGroup.appendChild(boardBase);
-                for(let i = 0; i < 8; i++) {
-                    for(let j = 0; j < 8; j++) {
-                        const squareEl = document.createElement('a-plane');
-                        squareEl.setAttribute('width', squareSize);
-                        squareEl.setAttribute('height', squareSize);
-                        squareEl.setAttribute('color', (i + j) % 2 === 0 ? '#D18B47' : '#FFCE9E');
-                        const x = -boardSize/2 + squareSize/2 + j * squareSize;
-                        const z = -boardSize/2 + squareSize/2 + i * squareSize;
-                        squareEl.setAttribute('position', `${x} 0.001 ${z}`);
-                        squareEl.setAttribute('rotation', '-90 0 0');
-                        squareEl.dataset.square = 'abcdefgh'[j] + (8 - i);
-                        squareEl.classList.add('clickable-square');
-                        boardGroup.appendChild(squareEl);
-                    }
-                }
-                parent.appendChild(boardGroup);
-            }
-            
-            function renderBoardFromFen(parent) {
-                parent.querySelectorAll('.chess-piece').forEach(el => el.remove());
-                const boardSize = 0.6;
-                const squareSize = boardSize / 8;
-                const offset = -boardSize/2 + squareSize/2;
-                game.board().forEach((row, i) => {
-                    row.forEach((piece, j) => {
-                        if (!piece) return;
-                        const pieceEl = document.createElement('a-entity');
-                        pieceEl.classList.add('chess-piece');
-                        pieceEl.dataset.square = piece.square;
-                        if (assetMap[selectedSet]?.[piece.color]?.[piece.type]) {
-                            const modelData = assetMap[selectedSet][piece.color][piece.type];
-                            pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
-                            pieceEl.setAttribute('scale', modelData.scale);
-                            pieceEl.setAttribute('rotation', modelData.rotation);
-                        } else {
-                            const primitive = getPrimitive(piece.type, piece.color);
-                            pieceEl.setAttribute('geometry', primitive.geometry);
-                            pieceEl.setAttribute('material', `color: ${primitive.color}`);
-                        }
-                        const x = offset + j * squareSize;
-                        const z = offset + i * squareSize;
-                        pieceEl.setAttribute('position', `${x} 0.02 ${z}`);
-                        parent.appendChild(pieceEl);
-                    });
-                });
-            }
-
-            function handleGameClick(evt) {
-                if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
-                const clickedEl = evt.target.closest('.chess-piece, .clickable-square, .legal-move-marker');
-                if (!clickedEl) {
-                     clearLegalMoves();
-                     gameState = 'IDLE';
-                     return;
-                }
-                if (gameState === 'IDLE') {
-                    if (clickedEl.classList.contains('chess-piece')) {
-                        const square = clickedEl.dataset.square;
-                        const piece = game.get(square);
-                        if (piece && piece.color === game.turn()) selectPiece(clickedEl);
-                    }
-                } else if (gameState === 'PIECE_SELECTED') {
-                    let toSquare = clickedEl.dataset.square;
-                    if (toSquare) {
-                        const fromSquare = selectedPieceEntity.dataset.square;
-                        const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' });
-                        if (move) {
-                            movePiece();
-                        } else {
-                            const piece = game.get(toSquare);
-                            if (piece && piece.color === game.turn()) {
-                                selectPiece(document.querySelector(`.chess-piece[data-square="${toSquare}"]`));
-                            } else {
-                                clearLegalMoves();
-                                gameState = 'IDLE';
-                            }
-                        }
-                    } else {
-                        clearLegalMoves();
-                        gameState = 'IDLE';
-                    }
-                }
-            }
-
-            function selectPiece(entity) {
-                clearLegalMoves();
-                selectedPieceEntity = entity;
-                gameState = 'PIECE_SELECTED';
-                const moves = game.moves({ square: entity.dataset.square, verbose: true });
-                moves.forEach(move => {
-                    const pos = squareToPosition(move.to);
-                    const marker = document.createElement('a-cylinder');
-                    marker.setAttribute('radius', '0.03');
-                    marker.setAttribute('height', '0.005');
-                    marker.setAttribute('material', 'color: green; opacity: 0.6');
-                    marker.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-                    marker.dataset.square = move.to;
-                    marker.classList.add('legal-move-marker');
-                    sceneEl.querySelector('#board-group').appendChild(marker);
-                    legalMoveEntities.push(marker);
-                });
-            }
-
-            function clearLegalMoves() {
-                legalMoveEntities.forEach(e => e.parentNode.removeChild(e));
-                legalMoveEntities = [];
-            }
-            
-            function movePiece() {
-                clearLegalMoves();
-                gameState = 'IDLE';
-                renderBoardFromFen(sceneEl.querySelector('#board-container'));
-                updateGameStatus();
-                if (!game.game_over() && gameMode === 'pva' && game.turn() !== playerColor) {
-                    setTimeout(makeAIMove, 500);
-                }
-            }
-            
-            function makeAIMove() {
-                const moves = game.moves();
-                if (moves.length > 0) {
-                    game.move(moves[Math.floor(Math.random() * moves.length)]);
-                    movePiece();
-                }
-            }
-
-            function updateGameStatus() {
-                let status = '';
-                const moveColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
-                if (game.in_checkmate()) {
-                    status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`;
-                } else if (game.in_draw()) {
-                    status = 'Empate';
-                } else {
-                    status = `Turno de las ${moveColor}`;
-                    if (game.in_check()) status += ' - ¡Jaque!';
-                }
-                gameStatusEl.textContent = status;
-            }
-
-             function squareToPosition(square) {
-                 const boardSize = 0.6;
-                 const squareSize = boardSize / 8;
-                 const offset = -boardSize/2 + squareSize/2;
-                 const col = 'abcdefgh'.indexOf(square[0]);
-                 const row = 8 - parseInt(square[1]);
-                 return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
-            }
-
-            function getPrimitive(type, color) {
-                const colors = { w: '#E5E7EB', b: '#4B5563', w_q: '#FBBF24', w_k: '#FDE68A', b_q: '#6B7280', b_k: '#1F2937' };
-                const c = colors[`${color}_${type}`] || colors[color];
-                const geo = {
-                    p: 'primitive: cylinder; height: 0.04; radius: 0.015',
-                    r: 'primitive: box; width: 0.035; height: 0.045; depth: 0.035',
-                    n: 'primitive: cone; radiusBottom: 0.02; height: 0.055',
-                    b: 'primitive: cylinder; height: 0.06; radiusTop: 0.005; radiusBottom: 0.02',
-                    q: 'primitive: sphere; radius: 0.03',
-                    k: 'primitive: dodecahedron; radius: 0.035'
-                };
-                return { geometry: geo[type], color: c };
-            }
-
+            // --- MENÚ MÓVIL ---
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const icons = mobileMenuButton.querySelectorAll('svg');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+                icons.forEach(icon => icon.classList.toggle('hidden'));
+            });
         });
     </script>
 </body>
 </html>
+
+
 
 
 
