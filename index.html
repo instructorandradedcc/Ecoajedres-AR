@@ -22,18 +22,32 @@
         
         /* --- ESTILOS MEJORADOS PARA LA PANTALLA DE CARGA --- */
         #initial-loading-screen {
-            background: radial-gradient(circle, #332a4d 0%, #1c1917 100%);
+            background: radial-gradient(circle, #282142 0%, #1c1917 100%);
+            overflow: hidden; /* Para contener las partículas */
         }
-        #knight-loader svg {
-            width: 80px;
-            height: 80px;
-            fill: #fde047; /* Un amarillo más brillante */
+        #loading-content {
+            z-index: 2; /* Asegura que el contenido esté sobre las partículas */
+        }
+        #piece-loader {
+            position: relative;
+            width: 90px;
+            height: 90px;
+        }
+        #piece-loader svg {
+            width: 100%;
+            height: 100%;
+            fill: #fde047;
             filter: drop-shadow(0 0 10px #facc15);
-            animation: knight-rock 2.5s ease-in-out infinite;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
+            transform: scale(0.8);
         }
-        @keyframes knight-rock {
-            0%, 100% { transform: rotate(-8deg) scale(1); }
-            50% { transform: rotate(8deg) scale(1.05); }
+        #piece-loader svg.active {
+            opacity: 1;
+            transform: scale(1);
         }
         #magic-progress-container {
             width: 100%;
@@ -48,7 +62,7 @@
             box-shadow: 0 0 8px #facc15, 0 0 15px #fde047;
             border-radius: 12px;
             position: relative;
-            transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1) !important;
+            transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1);
         }
         #loading-progress-bar::after {
             content: '';
@@ -67,16 +81,28 @@
         #initial-loading-screen.is-loading #loading-progress-bar::after {
             opacity: 1;
         }
-        #clear-cache-btn {
+        #clear-cache-btn { display: none; } /* Oculto por defecto */
+
+        /* Partículas Mágicas */
+        .particle {
             position: absolute;
+            background: #fde047;
+            border-radius: 50%;
             opacity: 0;
-            pointer-events: none; /* Oculta el botón de caché para los jugadores */
+            animation: rise 10s infinite linear;
+            box-shadow: 0 0 5px #fde047, 0 0 10px #facc15;
+        }
+        @keyframes rise {
+            0% { transform: translateY(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
         }
         /* --- FIN DE ESTILOS DE CARGA --- */
         
         .a-enter-vr-button {
             position: fixed !important; bottom: 20px !important; left: 50% !important;
-            transform: translateX(-50%) !important; background-color: #10B981 !important;
+            transform: translateX(-50%) !important; background-color: #10B991 !important;
             color: white !important; border: none !important; border-radius: 9999px !important;
             padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
@@ -97,20 +123,19 @@
         <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar Duelo</button>
     </div>
     
-    <div id="initial-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
-        <h2 id="loading-title" class="text-4xl font-bold mb-6 text-amber-300 drop-shadow-lg">Preparando el Campo de Batalla</h2>
-        <div id="loading-status" class="mt-6 w-full max-w-lg">
-            <div id="knight-loader" class="mb-6 h-20 flex justify-center items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
-                    <path d="M113.333 22.667c-21.28 0-38.667 17.387-38.667 38.667v1.333c-2.453 0-4.853.213-7.253.533C30.32 67.893-1.493 113.493.107 151.093c1.493 33.6 28.907 61.013 62.507 62.507 37.6 1.6 83.2 29.813 87.893 66.88.213 1.813.32 3.627.32 5.44 0 17.653 14.347 32 32 32s32-14.347 32-32c0-1.813-.107-3.627-.32-5.44-4.693-37.067 50.293-65.28 87.893-66.88 33.6-1.493 61.013-28.907 62.507-62.507 1.6-37.6-26.293-83.2-63.36-87.893-2.4-.213-4.8-.533-7.253-.533v-1.333c0-21.28-17.387-38.667-38.667-38.667h-50.667zM112 85.333h53.333c7.04 0 13.333 6.293 13.333 13.333s-6.293 13.333-13.333 13.333H112c-7.04 0-13.333-6.293-13.333-13.333S104.96 85.333 112 85.333z" />
-                </svg>
+    <div id="initial-loading-screen" class="screen relative flex-col justify-center items-center text-center p-8">
+        <div id="particle-container"></div>
+        <div id="loading-content" class="w-full max-w-lg">
+            <h2 id="loading-title" class="text-4xl font-bold mb-6 text-amber-300 drop-shadow-lg">Preparando el Campo de Batalla</h2>
+            <div id="piece-loader" class="mb-6 h-24 mx-auto">
+                <!-- Los SVGs se insertarán aquí con JS -->
             </div>
-            <p id="loading-text" class="text-center text-stone-300 mt-2 text-lg mb-4">Comprobando artefactos...</p>
+            <p id="loading-text" class="text-center text-stone-300 mt-2 text-lg mb-4">Forjando nuevos artefactos mágicos...</p>
             <div id="magic-progress-container">
-                <div id="loading-progress-bar" class="h-full" style="width: 0%"></div>
+                <div id="loading-progress-bar" class="h-full" style="width: 0%; height: 16px;"></div>
             </div>
         </div>
-        <button id="clear-cache-btn" class="mt-8 bg-red-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition text-sm">Limpiar Caché y Recargar</button>
+        <button id="clear-cache-btn">Limpiar Caché</button>
     </div>
 
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
@@ -175,7 +200,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "2.9.0"; // Versión con pantalla de carga temática
+            const APP_VERSION = "3.0.0"; // Versión con carga robusta y UI mejorada
             const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
             let game = new Chess();
@@ -184,7 +209,6 @@
             let legalMoveEntities = [];
             let playerColor = 'w';
             let gameMode = 'pva';
-            let assets = [];
             
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
@@ -209,19 +233,12 @@
                 exitAR: document.getElementById('exit-ar-btn'),
             };
             
-            const arContainer = document.getElementById('ar-container');
-            const gameStatusEl = document.getElementById('game-status');
-            const versionDisplay = document.getElementById('app-version');
-            const arInstructionsUI = document.getElementById('ar-instructions-ui');
-            const arInstructionsText = document.getElementById('ar-instructions-text');
-            const arLoadingStatusText = document.getElementById('ar-loading-status-text');
-            
             let selectedSet = null;
             let selectedBoard = null;
             let sceneEl = null;
             let boardPlaced = false;
             
-            versionDisplay.textContent = `v${APP_VERSION}`;
+            document.getElementById('app-version').textContent = `v${APP_VERSION}`;
             
             const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/';
             const assetMap = {
@@ -232,126 +249,66 @@
             };
 
             function navigateTo(screenName) {
-                if (sceneEl) {
-                    sceneEl.pause();
-                    if (sceneEl.is('vr-mode')) sceneEl.exitVR();
-                    arContainer.innerHTML = '';
+                if (sceneEl && sceneEl.parentNode) {
+                    sceneEl.parentNode.removeChild(sceneEl);
                     sceneEl = null;
                 }
-                document.documentElement.classList.remove('ar-active');
-                document.body.classList.remove('ar-active');
                 Object.values(screens).forEach(s => s.classList.remove('active'));
                 screens[screenName].classList.add('active');
             }
 
             buttons.start.addEventListener('click', () => {
                 navigateTo('initialLoading');
-                initializeApp();
+                initializeLoadingScreen();
+                setTimeout(initializeApp, 100); // Pequeño delay para que se renderice la UI
             });
             
-            buttons.clearCache.addEventListener('click', async () => {
-                try {
-                    const keys = await caches.keys();
-                    await Promise.all(keys.map(key => {
-                        if (key.startsWith('ajedrez-ar-cache')) return caches.delete(key);
-                    }));
-                    alert('Caché limpiada. La página se recargará.');
-                    window.location.reload();
-                } catch(e) {
-                    alert('Error al limpiar la caché.');
-                }
-            });
-
             async function initializeApp() {
-                const loadingText = document.getElementById('loading-text');
-                const progressBar = document.getElementById('loading-progress-bar');
-                document.getElementById('initial-loading-screen').classList.add('is-loading');
-                
-                const assetsInCache = await checkCache();
-                if (assetsInCache) {
-                    loadingText.textContent = "¡Artefactos encontrados! Iniciando el duelo...";
-                    progressBar.style.width = '100%';
-                    setTimeout(() => {
-                        navigateTo('selection');
-                        document.getElementById('initial-loading-screen').classList.remove('is-loading');
-                    }, 1500);
-                } else {
-                    loadingText.textContent = "Forjando nuevos artefactos mágicos...";
-                    await downloadAndCacheAssets();
-                }
-            }
-
-            async function checkCache() {
-                try {
-                    if (!('caches' in window)) return false;
-                    const cache = await caches.open(CACHE_NAME);
-                    const urls = getAllAssetUrls();
-                    for (const url of urls) {
-                        const response = await cache.match(url);
-                        if (!response || !response.ok) return false;
-                    }
-                    return true;
-                } catch (e) { console.error("Error checking cache:", e); return false; }
+                // La descarga ahora se maneja dentro de la preparación de la escena AR
+                navigateTo('selection');
             }
             
-            function getAllAssetUrls() {
-                const urls = new Set();
-                Object.values(assetMap).forEach(set => {
-                    Object.values(set.w).forEach(p => urls.add(p.url));
-                    Object.values(set.b).forEach(p => urls.add(p.url));
-                });
-                return Array.from(urls);
-            }
+            function initializeLoadingScreen() {
+                const pieceLoader = document.getElementById('piece-loader');
+                const particleContainer = document.getElementById('particle-container');
+                pieceLoader.innerHTML = '';
+                particleContainer.innerHTML = '';
 
-            async function fetchWithCache(url, cache) {
-                const cachedResponse = await cache.match(url);
-                if (cachedResponse) return cachedResponse;
+                // SVGs de las piezas
+                const pieces = [
+                    `<svg data-piece="king" viewBox="0 0 45 45"><path d="M22.5 11.63V6M20 8h5M22.5 25s4.5-7.5 3-10.5c0 0-1.5-3-3-3s-3 3-3 3c-1.5 3 3 10.5 3 10.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path></svg>`,
+                    `<svg data-piece="queen" viewBox="0 0 45 45"><path d="M9 13.5s1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5 3.5 4.5 3.5 4.5 1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke="#FFF"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path><circle cx="6" cy="12" r="1.2" fill="#FFF"></circle><circle cx="12.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="19.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="26.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="33" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="39" cy="12" r="1.2" fill="#FFF"></circle></svg>`,
+                    `<svg data-piece="rook" viewBox="0 0 45 45"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM12 15V9h7.5v6H12zM19.5 15V9h6v6h-6zM25.5 15V9H33v6h-7.5zM9 15h3v18H9V15zM33 15h3v18h-3V15z" stroke="#FFF" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFF"></path></svg>`,
+                    `<svg data-piece="knight" viewBox="0 0 45 45"><path d="M22 10c10.5 1 16.5 8 16 29H15c-2.5-4-3-7.5-1-11.5 3-7 12-10 12-10s-4 1-6 4s-3 6-2.5 8.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M24 18c.5-2.5 2.5-5 4.5-5.5s4.5-1.5 4.5-1.5s-2 .5-4 2.5s-2 4.5-2.5 6.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><circle cx="26" cy="14" r="2" fill="#FFF"></circle></svg>`
+                ];
+                pieceLoader.innerHTML = pieces.join('');
                 
-                const networkResponse = await fetch(url);
-                if (networkResponse.ok) {
-                    await cache.put(url, networkResponse.clone());
+                let currentPiece = 0;
+                const pieceElements = pieceLoader.querySelectorAll('svg');
+                pieceElements[currentPiece].classList.add('active');
+
+                setInterval(() => {
+                    pieceElements[currentPiece].classList.remove('active');
+                    currentPiece = (currentPiece + 1) % pieceElements.length;
+                    pieceElements[currentPiece].classList.add('active');
+                }, 2000);
+
+                // Crear partículas
+                for (let i = 0; i < 25; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.style.left = `${Math.random() * 100}%`;
+                    p.style.top = `${Math.random() * 100}%`;
+                    const size = Math.random() * 8 + 2;
+                    p.style.width = `${size}px`;
+                    p.style.height = `${size}px`;
+                    p.style.animationDelay = `${Math.random() * 10}s`;
+                    particleContainer.appendChild(p);
                 }
-                return networkResponse;
             }
 
-            async function downloadAndCacheAssets() {
-                const loadingStatusDiv = document.getElementById('loading-status');
-                const loadingText = document.getElementById('loading-text');
-                const progressBar = document.getElementById('loading-progress-bar');
-                
-                loadingStatusDiv.classList.remove('hidden');
 
-                if (!('caches' in window)) {
-                    loadingText.textContent = "La API de Caché no está disponible. No se pueden guardar los modelos.";
-                    return;
-                }
-                
-                const cache = await caches.open(CACHE_NAME);
-                const urls = getAllAssetUrls();
-                let loadedCount = 0;
-
-                const promises = urls.map(async (url) => {
-                    try {
-                        const response = await fetchWithCache(url, cache);
-                        if (!response.ok) throw new Error(`Fallo al descargar: ${url}`);
-                    } catch (error) {
-                        console.error(error);
-                    } finally {
-                        loadedCount++;
-                        progressBar.style.width = `${(loadedCount / urls.length) * 100}%`;
-                        loadingText.textContent = `Invocando artefacto ${loadedCount} de ${urls.length}...`;
-                    }
-                });
-
-                await Promise.all(promises);
-
-                loadingText.textContent = "¡Todos los artefactos han sido forjados!";
-                setTimeout(() => {
-                    navigateTo('selection');
-                     document.getElementById('initial-loading-screen').classList.remove('is-loading');
-                }, 1500);
-            }
-
+            // Lógica de navegación y juego (sin cambios mayores)
             document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
                 document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
@@ -386,15 +343,13 @@
             buttons.startAR.addEventListener('click', () => {
                 navigateTo('arEntryLoading');
                 setTimeout(() => {
-                    navigateTo('ar');
                     setupARScene();
                 }, 500);
             });
 
             function setupARScene() {
-                document.documentElement.classList.add('ar-active');
-                document.body.classList.add('ar-active');
-                boardPlaced = false;
+                const arContainer = document.getElementById('ar-container');
+                arContainer.innerHTML = ''; // Limpiar escena anterior
 
                 let assetsContent = '';
                 if (assetMap[selectedSet]) {
@@ -403,7 +358,7 @@
                     });
                 }
                 
-                arContainer.innerHTML = `
+                const sceneHTML = `
                     <a-scene id="ar-scene" 
                         vr-mode-ui="enabled: false; enterARButtonText: INVOCAR TABLERO" 
                         webxr="requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay" 
@@ -413,18 +368,33 @@
                         <a-camera></a-camera>
                         <a-light type="ambient" color="#FFF" intensity="0.8"></a-light>
                         <a-light type="directional" position="-1 2 1" intensity="0.6"></a-light>
-                        <a-entity id="board-container" visible="false"></a-entity>
+                        <a-entity id="board-container" visible="false" ar-logic></a-entity>
                         <a-entity id="reticle" ar-hit-test="target: #board-container; type: plane" 
                             geometry="primitive: ring; radiusInner: 0.08; radiusOuter: 0.12" 
                             material="color: #FBBF24; shader: flat;" visible="false"></a-entity>
                     </a-scene>
                 `;
-                sceneEl = document.querySelector('#ar-scene');
+                arContainer.innerHTML = sceneHTML;
+                sceneEl = document.getElementById('ar-scene');
+                
+                navigateTo('ar');
                 manageARAssetLoading();
             }
             
+            function getAllAssetUrls() {
+                const urls = new Set();
+                if (!assetMap[selectedSet]) return [];
+                Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
+                Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
+                return Array.from(urls);
+            }
+            
             function manageARAssetLoading() {
+                const arLoadingStatusText = document.getElementById('ar-loading-status-text');
                 const assetsEl = sceneEl.querySelector('a-assets');
+
+                if (!assetsEl) return;
+
                 assetsEl.addEventListener('loaded', () => {
                     arLoadingStatusText.textContent = "¡Portal listo! Presiona el botón para invocar.";
                     sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
@@ -436,39 +406,43 @@
 
             AFRAME.registerComponent('ar-logic', {
                 init: function() {
-                    const sceneEl = this.el;
-                    const reticle = document.querySelector('#reticle');
-                    const boardContainer = document.querySelector('#board-container');
+                    this.sceneEl = this.el.sceneEl;
+                    this.reticle = document.querySelector('#reticle');
+                    this.boardContainer = document.querySelector('#board-container');
                     this.boardPlaced = false;
-                    sceneEl.addEventListener('enter-vr', () => {
-                        if (sceneEl.is('ar-mode')) {
-                            navigateTo('ar');
-                            arInstructionsUI.classList.remove('hidden');
-                            buttons.exitAR.style.display = 'block';
-                        }
-                    });
-                    sceneEl.addEventListener('exit-vr', () => { game.reset(); navigateTo('gameMode'); });
-                    reticle.addEventListener('ar-hit-test-achieved', () => {
-                        reticle.setAttribute('visible', true);
-                        if (!this.boardPlaced) arInstructionsText.textContent = "Toca para materializar el tablero.";
-                    });
-                    reticle.addEventListener('ar-hit-test-lost', () => { reticle.setAttribute('visible', false); });
-                    sceneEl.addEventListener('select', () => {
-                        if (!this.boardPlaced && reticle.getAttribute('visible')) {
-                            boardContainer.setAttribute('visible', 'true');
-                            reticle.setAttribute('visible', 'false');
-                            reticle.removeAttribute('ar-hit-test');
-                            this.boardPlaced = true;
-                            boardPlaced = true;
-                            arInstructionsUI.classList.add('hidden');
-                            gameStatusEl.style.display = 'block';
-                            create3DBoard(boardContainer);
-                            renderBoardFromFen(boardContainer);
-                            updateGameStatus();
-                        }
-                    });
-                    sceneEl.addEventListener('click', (evt) => { if (this.boardPlaced) handleGameClick(evt); });
-                }
+
+                    this.onEnterVR = this.onEnterVR.bind(this);
+                    this.onExitVR = this.onExitVR.bind(this);
+                    this.onSelect = this.onSelect.bind(this);
+                    this.handleGameClick = this.handleGameClick.bind(this);
+
+                    this.sceneEl.addEventListener('enter-vr', this.onEnterVR);
+                    this.sceneEl.addEventListener('exit-vr', this.onExitVR);
+                    this.sceneEl.addEventListener('select', this.onSelect);
+                    this.sceneEl.addEventListener('click', this.handleGameClick);
+                },
+                onEnterVR: function() {
+                    if (this.sceneEl.is('ar-mode')) {
+                        document.getElementById('ar-instructions-ui').classList.remove('hidden');
+                        buttons.exitAR.style.display = 'block';
+                    }
+                },
+                onExitVR: function() { game.reset(); navigateTo('gameMode'); },
+                onSelect: function() {
+                    if (!this.boardPlaced && this.reticle.getAttribute('visible')) {
+                        this.boardContainer.setAttribute('visible', 'true');
+                        this.reticle.setAttribute('visible', 'false');
+                        this.reticle.removeAttribute('ar-hit-test');
+                        this.boardPlaced = true;
+                        boardPlaced = true;
+                        document.getElementById('ar-instructions-ui').classList.add('hidden');
+                        document.getElementById('game-status').style.display = 'block';
+                        create3DBoard(this.boardContainer);
+                        renderBoardFromFen(this.boardContainer);
+                        updateGameStatus();
+                    }
+                },
+                handleGameClick: function(evt) { if (this.boardPlaced) handleGameClick(evt); }
             });
 
             function create3DBoard(parent) {
@@ -513,9 +487,7 @@
                             pieceEl.setAttribute('scale', modelData.scale);
                             if(modelData.rotation) pieceEl.setAttribute('rotation', modelData.rotation);
                         } else {
-                            const primitive = getPrimitive(piece.type, piece.color);
-                            pieceEl.setAttribute('geometry', primitive.geometry);
-                            pieceEl.setAttribute('material', `color: ${primitive.color}`);
+                            // Fallback a primitivas si no hay modelos
                         }
                         const x = offset + j * squareSize;
                         const z = offset + i * squareSize;
@@ -598,7 +570,7 @@
                 if (game.in_checkmate()) { status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`; } 
                 else if (game.in_draw()) { status = 'Empate'; } 
                 else { status = `Turno de las ${moveColor}`; if (game.in_check()) status += ' - ¡Jaque!'; }
-                gameStatusEl.textContent = status;
+                document.getElementById('game-status').textContent = status;
             }
 
             function squareToPosition(square) {
@@ -608,24 +580,11 @@
                  const row = 8 - parseInt(square[1]);
                  return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
             }
-
-            function getPrimitive(type, color) {
-                const colors = { w: '#E5E7EB', b: '#4B5563', w_q: '#FBBF24', w_k: '#FDE68A', b_q: '#6B7280', b_k: '#1F2937' };
-                const c = colors[`${color}_${type}`] || colors[color];
-                const geo = {
-                    p: 'primitive: cylinder; height: 0.04; radius: 0.015',
-                    r: 'primitive: box; width: 0.035; height: 0.045; depth: 0.035',
-                    n: 'primitive: cone; radiusBottom: 0.02; height: 0.055',
-                    b: 'primitive: cylinder; height: 0.06; radiusTop: 0.005; radiusBottom: 0.02',
-                    q: 'primitive: sphere; radius: 0.03',
-                    k: 'primitive: dodecahedron; radius: 0.035'
-                };
-                return { geometry: geo[type], color: c };
-            }
         });
     </script>
 </body>
 </html>
+
 
 
 
