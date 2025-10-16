@@ -10,7 +10,7 @@
         /* Estilos generales */
         body { 
             overscroll-behavior: none; 
-            overflow-y: auto; /* ✅ Habilitar scroll por defecto */
+            overflow-y: auto; 
         }
         html.ar-active, body.ar-active { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }
         .screen { 
@@ -19,11 +19,11 @@
             top: 0; 
             left: 0; 
             width: 100%; 
-            min-height: 100vh; /* Usar altura del viewport */
+            min-height: 100vh; 
             overflow-y: auto; 
             transition: opacity 0.5s ease-in-out; 
             z-index: 10; 
-            padding-bottom: 8rem; /* Espacio extra al final para que los botones no se corten */
+            padding-bottom: 8rem; 
         }
         .screen.active { display: flex; }
         .selection-card, .board-card, .color-swatch, .mode-card { transition: all 0.3s ease; border: 4px solid transparent; }
@@ -52,7 +52,6 @@
             width: 20px; height: 20px; 
             background: white; border-radius: 50%; 
             opacity: 1; transition: opacity 0.3s;
-            /* ✅ Animación de pulso mágico */
             animation: pulse-glow 1.5s infinite ease-in-out;
         }
         @keyframes pulse-glow {
@@ -67,8 +66,67 @@
         @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; } }
         
         .a-enter-vr-button { position: fixed !important; bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important; background-color: #10B991 !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important; }
-        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.95); } }
-        .pulsing-icon { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        /* Animaciones para la pantalla de carga AR (efecto "Doctor Strange") */
+        #ar-loading-visual {
+            position: relative;
+            width: 150px; /* Tamaño base del portal */
+            height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .portal-ring {
+            position: absolute;
+            border: 5px solid transparent;
+            border-radius: 50%;
+            animation: portal-spin 8s linear infinite, portal-pulse 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 15px #facc15) drop-shadow(0 0 30px #fde047);
+        }
+
+        .portal-ring-outer {
+            width: 150px; height: 150px;
+            border-top-color: #fde047;
+            border-right-color: #facc15;
+            animation-delay: -0.5s;
+        }
+
+        .portal-ring-inner {
+            width: 100px; height: 100px;
+            border-bottom-color: #fde047;
+            border-left-color: #facc15;
+            animation-delay: -1.5s;
+        }
+        
+        .floating-king-icon {
+            position: relative; 
+            z-index: 10;
+            animation: float-and-rotate 3s ease-in-out infinite, magic-glow 2s infinite alternate;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8));
+        }
+
+        @keyframes portal-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes portal-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+
+        @keyframes float-and-rotate {
+            0% { transform: translateY(0) rotateY(0deg); }
+            50% { transform: translateY(-10px) rotateY(10deg); }
+            100% { transform: translateY(0) rotateY(0deg); }
+        }
+        @keyframes magic-glow {
+            0% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8)); }
+            50% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 25px rgba(253, 224, 71, 1)); }
+            100% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8)); }
+        }
     </style>
 </head>
 <body class="bg-stone-900 text-white">
@@ -94,8 +152,8 @@
         </div>
     </div>
 
-    <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Ejército</h2><p class="text-stone-300">Elige el estilo de piezas para tu partida.</p></div>
+    <div id="selection-screen" class="screen flex-col items-center p-8 bg-stone-800">
+        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Ejército</h2><p class="text-stone-300">Elige el estilo de piezas para tu partida.</p></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧙‍♂️</div><h3 class="text-2xl font-semibold mb-2">Ajedrez Mágico</h3><p class="text-stone-400">Piezas inspiradas en el mundo de los magos.</p></div>
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♜</span></div><h3 class="text-2xl font-semibold mb-2">Vanguardia Futurista</h3><p class="text-stone-400">Diseño moderno y disruptivo.</p></div>
@@ -103,8 +161,8 @@
         <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
     </div>
     
-    <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2><p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p></div>
+    <div id="board-selection-screen" class="screen flex-col items-center p-8 bg-stone-800">
+        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2><p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p></div>
         <div class="max-w-4xl w-full">
             <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
@@ -118,8 +176,8 @@
         <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
-    <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Duelo</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
+    <div id="game-mode-screen" class="screen flex-col items-center p-8 bg-stone-800">
+        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Duelo</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div><h3 class="text-2xl font-semibold">Estratega Solitario (vs. Oráculo)</h3></div>
             <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pvp"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧑‍🤝‍🧑</div><h3 class="text-2xl font-semibold">Duelo de Leyendas (1 vs. 1)</h3></div>
@@ -139,10 +197,14 @@
     
     <div id="ar-entry-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
         <div id="particle-container-ar" class="particle-container"></div>
-        <div class="w-full max-w-lg z-10">
-            <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Iniciando Cámara...</h2>
-            <div class="text-8xl text-amber-300 mb-6 pulsing-icon" style="filter: drop-shadow(0 0 10px #facc15);">♔</div>
-            <p id="ar-loading-status-text" class="text-stone-300 max-w-xl mb-6">Alineando el plano astral, por favor espera.</p>
+        <div class="w-full max-w-lg z-10 flex flex-col items-center">
+            <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Abriendo Portal...</h2>
+            <div id="ar-loading-visual">
+                <div class="portal-ring portal-ring-outer"></div>
+                <div class="portal-ring portal-ring-inner"></div>
+                <div class="floating-king-icon text-8xl text-amber-300">♔</div>
+            </div>
+            <p id="ar-loading-status-text" class="text-stone-300 max-w-xl mb-6">Alineando el plano astral...</p>
         </div>
     </div>
 
@@ -160,7 +222,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.9.0"; // Versión con Feedback de Caché y Scroll
+            const APP_VERSION = "3.11.0"; // Versión con Frases de Carga Dinámicas
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
             // --- Estado del juego y variables globales ---
@@ -174,8 +236,8 @@
             let selectedBoard = null;
             let sceneEl = null;
             let boardPlaced = false;
+            let loadingPhrasesInterval = null;
 
-            // --- Referencias a elementos del DOM ---
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
                 initialLoading: document.getElementById('initial-loading-screen'),
@@ -219,12 +281,10 @@
                 screens[screenName].classList.add('active');
             }
             
-            // --- ✅ LÓGICA DE PRECARGA Y VISUALES DE CARGA ---
-            
             function createParticles(containerId, count = 25) {
                 const container = document.getElementById(containerId);
                 if (!container) return;
-                container.innerHTML = ''; // Limpiar partículas viejas
+                container.innerHTML = ''; 
                 for (let i = 0; i < count; i++) {
                     const p = document.createElement('div');
                     p.className = 'particle';
@@ -241,11 +301,9 @@
                 navigateTo('initialLoading');
                 initializeLoadingScreenVisuals();
                 createParticles('particle-container');
-
                 const progressBar = document.getElementById('initial-loading-progress-bar');
                 const loadingText = document.getElementById('loading-text');
 
-                // ✅ Lógica de Feedback de Caché
                 if (localStorage.getItem('assets_preloaded_v1')) {
                     loadingText.textContent = "Verificando artefactos en el castillo...";
                 } else {
@@ -265,8 +323,7 @@
                 
                 if (allAssetUrls.size === 0) {
                     loadingText.textContent = "¡Arsenal listo! No hay artefactos que forjar.";
-                    setTimeout(() => navigateTo('selection'), 1000);
-                    return;
+                    setTimeout(() => navigateTo('selection'), 1000); return;
                 }
 
                 let assetsContent = Array.from(allAssetUrls).map(url => `<a-asset-item id="preload-${url}" src="${url}"></a-asset-item>`).join('');
@@ -286,7 +343,7 @@
 
                 assetsEl.addEventListener('loaded', () => {
                     loadingText.textContent = "¡Arsenal mágico listo!";
-                    localStorage.setItem('assets_preloaded_v1', 'true'); // Guardar en caché
+                    localStorage.setItem('assets_preloaded_v1', 'true'); 
                     setTimeout(() => {
                         document.body.removeChild(tempScene);
                         navigateTo('selection');
@@ -298,11 +355,7 @@
                 });
             }
 
-            buttons.start.addEventListener('click', () => {
-                preloadAllAssets();
-            });
-
-            // --- Lógica de UI ---
+            buttons.start.addEventListener('click', () => { preloadAllAssets(); });
             document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', e => {
                 document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
@@ -334,17 +387,27 @@
             buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
             buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
             buttons.exitAR.addEventListener('click', () => {
+                clearInterval(loadingPhrasesInterval);
                 if (sceneEl && sceneEl.is('ar-mode')) sceneEl.exitVR();
                 else navigateTo('gameMode');
             });
             
-            buttons.startAR.addEventListener('click', () => {
-                setupARScene();
-            });
+            buttons.startAR.addEventListener('click', () => { setupARScene(); });
 
             function setupARScene() {
                 navigateTo('arEntryLoading');
                 createParticles('particle-container-ar');
+                
+                // ✅ Iniciar frases dinámicas
+                const arLoadingText = document.getElementById('ar-loading-status-text');
+                const phrases = [ "Alineando el plano astral...", "Invocando poder arcano...", "Estabilizando la conexión...", "Enfocando la lente mágica...", "Casi listo para el duelo..." ];
+                let phraseIndex = 0;
+                arLoadingText.textContent = phrases[phraseIndex];
+                loadingPhrasesInterval = setInterval(() => {
+                    phraseIndex = (phraseIndex + 1) % phrases.length;
+                    arLoadingText.textContent = phrases[phraseIndex];
+                }, 2500);
+
                 const arContainer = document.getElementById('ar-container');
                 arContainer.innerHTML = ''; 
 
@@ -367,21 +430,21 @@
                         <a-light type="ambient" color="#FFF" intensity="1.2"></a-light>
                         <a-light type="directional" position="-1 2 1" intensity="1.0"></a-light>
                         <a-entity id="board-container" visible="false"></a-entity>
-                        <a-entity id="reticle" 
-                            geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" 
-                            material="color: #FBBF24; shader: flat;" 
-                            visible="false">
-                        </a-entity>
-                    </a-scene>
-                `;
+                        <a-entity id="reticle" geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" material="color: #FBBF24; shader: flat;" visible="false"></a-entity>
+                    </a-scene>`;
                 
                 arContainer.innerHTML = sceneHTML;
                 
                 setTimeout(() => {
                     sceneEl = document.getElementById('ar-scene');
-                    if (!sceneEl) { return; }
+                    if (!sceneEl) { 
+                        clearInterval(loadingPhrasesInterval);
+                        arLoadingText.textContent = "Error fatal al crear la escena.";
+                        return; 
+                    }
                     
                     sceneEl.addEventListener('loaded', () => {
+                        clearInterval(loadingPhrasesInterval); // ✅ Detener frases al cargar
                         navigateTo('ar');
                         sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
                         sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
@@ -501,7 +564,6 @@
                         const deltaX = e.touches[0].clientX - this.touchState.lastTouch.x;
                         const deltaY = e.touches[0].clientY - this.touchState.lastTouch.y;
                         const boardPos = this.boardContainer.object3D.position;
-                        // Mover el tablero en el plano horizontal (X, Z) - ajustado para ser más intuitivo
                         const camera = this.el.sceneEl.camera;
                         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
@@ -677,5 +739,7 @@
     </script>
 </body>
 </html>
+
+
 
 
