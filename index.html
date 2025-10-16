@@ -81,7 +81,6 @@
         #initial-loading-screen.is-loading #loading-progress-bar::after {
             opacity: 1;
         }
-        #clear-cache-btn { display: none; } /* Oculto por defecto */
 
         /* Partículas Mágicas */
         .particle {
@@ -135,7 +134,6 @@
                 <div id="loading-progress-bar" class="h-full" style="width: 0%; height: 16px;"></div>
             </div>
         </div>
-        <button id="clear-cache-btn">Limpiar Caché</button>
     </div>
 
     <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
@@ -190,7 +188,7 @@
     <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
         <div id="ar-container"></div>
         <div id="ar-ui-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Rendirse</p>
+            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Rendirse</button>
             <div id="ar-instructions-ui" class="hidden">
                 <p id="ar-instructions-text">Mueve tu dispositivo para encontrar una superficie.</p>
             </div>
@@ -200,16 +198,22 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.0.0"; // Versión con carga robusta y UI mejorada
-            const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
+            const APP_VERSION = "3.1.0"; // Versión con AR funcional
+            document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
+            // --- Estado del juego y variables globales ---
             let game = new Chess();
             let gameState = 'IDLE';
             let selectedPieceEntity = null;
             let legalMoveEntities = [];
             let playerColor = 'w';
             let gameMode = 'pva';
-            
+            let selectedSet = null;
+            let selectedBoard = null;
+            let sceneEl = null;
+            let boardPlaced = false;
+
+            // --- Referencias a elementos del DOM ---
             const screens = {
                 welcome: document.getElementById('welcome-screen'),
                 initialLoading: document.getElementById('initial-loading-screen'),
@@ -222,7 +226,6 @@
             };
             const buttons = {
                 start: document.getElementById('start-btn'),
-                clearCache: document.getElementById('clear-cache-btn'),
                 continueSet: document.getElementById('continue-set-btn'),
                 continueBoard: document.getElementById('continue-board-btn'),
                 startGame: document.getElementById('start-game-btn'),
@@ -232,24 +235,26 @@
                 backToModeSelect: document.getElementById('back-to-mode-select-btn'),
                 exitAR: document.getElementById('exit-ar-btn'),
             };
-            
-            let selectedSet = null;
-            let selectedBoard = null;
-            let sceneEl = null;
-            let boardPlaced = false;
-            
-            document.getElementById('app-version').textContent = `v${APP_VERSION}`;
-            
+
             const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/';
             const assetMap = {
                 'harry-potter': {
                     w: { p: { url: `${GITHUB_BASE_URL}Pawn_Gryffindor.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02' }, k: { url: `${GITHUB_BASE_URL}King_Dumbledore.glb`, scale: '0.02 0.02 0.02' } },
                     b: { p: { url: `${GITHUB_BASE_URL}Pawn_Sytherin.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby2.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter_Hollow.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: `${GITHUB_BASE_URL}King_Voldemort.glb`, scale: '0.02 0.02 0.02' } }
+                },
+                'futuristic': { // Placeholder for futuristic set
+                    w: { p: { url: ``, scale: '0.1 0.1 0.1' } },
+                    b: { p: { url: ``, scale: '0.1 0.1 0.1' } }
                 }
             };
 
+            // --- Navegación ---
             function navigateTo(screenName) {
+                // Si existe una escena de A-Frame, la eliminamos para limpiar recursos
                 if (sceneEl && sceneEl.parentNode) {
+                    if (sceneEl.is('ar-mode')) {
+                        sceneEl.exitVR();
+                    }
                     sceneEl.parentNode.removeChild(sceneEl);
                     sceneEl = null;
                 }
@@ -257,58 +262,13 @@
                 screens[screenName].classList.add('active');
             }
 
+            // --- Lógica de la interfaz de usuario ---
             buttons.start.addEventListener('click', () => {
                 navigateTo('initialLoading');
                 initializeLoadingScreen();
-                setTimeout(initializeApp, 100); // Pequeño delay para que se renderice la UI
+                setTimeout(() => navigateTo('selection'), 1500); // Simula carga y navega
             });
-            
-            async function initializeApp() {
-                // La descarga ahora se maneja dentro de la preparación de la escena AR
-                navigateTo('selection');
-            }
-            
-            function initializeLoadingScreen() {
-                const pieceLoader = document.getElementById('piece-loader');
-                const particleContainer = document.getElementById('particle-container');
-                pieceLoader.innerHTML = '';
-                particleContainer.innerHTML = '';
 
-                // SVGs de las piezas
-                const pieces = [
-                    `<svg data-piece="king" viewBox="0 0 45 45"><path d="M22.5 11.63V6M20 8h5M22.5 25s4.5-7.5 3-10.5c0 0-1.5-3-3-3s-3 3-3 3c-1.5 3 3 10.5 3 10.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path></svg>`,
-                    `<svg data-piece="queen" viewBox="0 0 45 45"><path d="M9 13.5s1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5 3.5 4.5 3.5 4.5 1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke="#FFF"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path><circle cx="6" cy="12" r="1.2" fill="#FFF"></circle><circle cx="12.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="19.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="26.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="33" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="39" cy="12" r="1.2" fill="#FFF"></circle></svg>`,
-                    `<svg data-piece="rook" viewBox="0 0 45 45"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM12 15V9h7.5v6H12zM19.5 15V9h6v6h-6zM25.5 15V9H33v6h-7.5zM9 15h3v18H9V15zM33 15h3v18h-3V15z" stroke="#FFF" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFF"></path></svg>`,
-                    `<svg data-piece="knight" viewBox="0 0 45 45"><path d="M22 10c10.5 1 16.5 8 16 29H15c-2.5-4-3-7.5-1-11.5 3-7 12-10 12-10s-4 1-6 4s-3 6-2.5 8.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M24 18c.5-2.5 2.5-5 4.5-5.5s4.5-1.5 4.5-1.5s-2 .5-4 2.5s-2 4.5-2.5 6.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><circle cx="26" cy="14" r="2" fill="#FFF"></circle></svg>`
-                ];
-                pieceLoader.innerHTML = pieces.join('');
-                
-                let currentPiece = 0;
-                const pieceElements = pieceLoader.querySelectorAll('svg');
-                pieceElements[currentPiece].classList.add('active');
-
-                setInterval(() => {
-                    pieceElements[currentPiece].classList.remove('active');
-                    currentPiece = (currentPiece + 1) % pieceElements.length;
-                    pieceElements[currentPiece].classList.add('active');
-                }, 2000);
-
-                // Crear partículas
-                for (let i = 0; i < 25; i++) {
-                    const p = document.createElement('div');
-                    p.className = 'particle';
-                    p.style.left = `${Math.random() * 100}%`;
-                    p.style.top = `${Math.random() * 100}%`;
-                    const size = Math.random() * 8 + 2;
-                    p.style.width = `${size}px`;
-                    p.style.height = `${size}px`;
-                    p.style.animationDelay = `${Math.random() * 10}s`;
-                    particleContainer.appendChild(p);
-                }
-            }
-
-
-            // Lógica de navegación y juego (sin cambios mayores)
             document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', (e) => {
                 document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
@@ -316,10 +276,7 @@
                 buttons.continueSet.disabled = false;
             }));
             buttons.continueSet.addEventListener('click', () => navigateTo('boardSelection'));
-            buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
-            buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
-            buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
-            buttons.exitAR.addEventListener('click', () => { game.reset(); navigateTo('gameMode'); });
+
             document.querySelectorAll('.board-card').forEach(card => card.addEventListener('click', (e) => {
                 document.querySelectorAll('.board-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
@@ -333,6 +290,7 @@
                 if (selectedBoard) buttons.continueBoard.disabled = false;
             }));
             buttons.continueBoard.addEventListener('click', () => navigateTo('gameMode'));
+
             document.querySelectorAll('.mode-card').forEach(card => card.addEventListener('click', (e) => {
                 document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
@@ -340,110 +298,179 @@
                 buttons.startGame.disabled = false;
             }));
             buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
+            
+            buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
+            buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
+            buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
+            
+            buttons.exitAR.addEventListener('click', () => {
+                game.reset();
+                boardPlaced = false;
+                // La navegación se gestiona en el evento 'exit-vr' para mayor estabilidad
+                if (sceneEl && sceneEl.is('ar-mode')) {
+                    sceneEl.exitVR(); 
+                } else {
+                    navigateTo('gameMode');
+                }
+            });
+
             buttons.startAR.addEventListener('click', () => {
                 navigateTo('arEntryLoading');
-                setTimeout(() => {
-                    setupARScene();
-                }, 500);
+                // Damos un pequeño respiro al navegador para que muestre la pantalla de carga
+                setTimeout(setupARScene, 100);
             });
+
+            // --- LÓGICA DE REALIDAD AUMENTADA (CORREGIDA) ---
 
             function setupARScene() {
                 const arContainer = document.getElementById('ar-container');
                 arContainer.innerHTML = ''; // Limpiar escena anterior
 
-                let assetsContent = '';
+                const assetUrls = new Set();
                 if (assetMap[selectedSet]) {
-                    getAllAssetUrls().forEach(url => {
-                        assetsContent += `<a-asset-item id="${url}" src="${url}" crossorigin="anonymous" response-type="arraybuffer"></a-asset-item>`;
-                    });
+                    Object.values(assetMap[selectedSet].w).forEach(p => p.url && assetUrls.add(p.url));
+                    Object.values(assetMap[selectedSet].b).forEach(p => p.url && assetUrls.add(p.url));
                 }
                 
+                let assetsContent = Array.from(assetUrls).map(url => 
+                    `<a-asset-item id="${url}" src="${url}" response-type="arraybuffer" crossorigin="anonymous"></a-asset-item>`
+                ).join('');
+
                 const sceneHTML = `
                     <a-scene id="ar-scene" 
-                        vr-mode-ui="enabled: false; enterARButtonText: INVOCAR TABLERO" 
-                        webxr="requiredFeatures: hit-test,local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay" 
-                        renderer="colorManagement: true" 
-                        loading-screen="dotsColor: white; backgroundColor: black">
-                        <a-assets timeout="30000">${assetsContent}</a-assets>
+                        vr-mode-ui="enabled: false;" 
+                        webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay;" 
+                        renderer="colorManagement: true; physicallyCorrectLights: true;"
+                        ar-logic>
+                        <a-assets timeout="45000">${assetsContent}</a-assets>
+                        
                         <a-camera></a-camera>
-                        <a-light type="ambient" color="#FFF" intensity="0.8"></a-light>
-                        <a-light type="directional" position="-1 2 1" intensity="0.6"></a-light>
-                        <a-entity id="board-container" visible="false" ar-logic></a-entity>
-                        <a-entity id="reticle" ar-hit-test="target: #board-container; type: plane" 
-                            geometry="primitive: ring; radiusInner: 0.08; radiusOuter: 0.12" 
-                            material="color: #FBBF24; shader: flat;" visible="false"></a-entity>
+                        
+                        <a-light type="ambient" color="#FFF" intensity="0.7"></a-light>
+                        <a-light type="directional" position="-1 2 1" intensity="0.8"></a-light>
+                        
+                        <a-entity id="board-container" visible="false"></a-entity>
+                        
+                        <a-entity id="reticle" 
+                            ar-hit-test="target: #board-container" 
+                            geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" 
+                            material="color: #FBBF24; shader: flat;" 
+                            visible="false">
+                        </a-entity>
                     </a-scene>
                 `;
                 arContainer.innerHTML = sceneHTML;
+                
                 sceneEl = document.getElementById('ar-scene');
                 
-                navigateTo('ar');
-                manageARAssetLoading();
-            }
-            
-            function getAllAssetUrls() {
-                const urls = new Set();
-                if (!assetMap[selectedSet]) return [];
-                Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
-                Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
-                return Array.from(urls);
-            }
-            
-            function manageARAssetLoading() {
-                const arLoadingStatusText = document.getElementById('ar-loading-status-text');
-                const assetsEl = sceneEl.querySelector('a-assets');
-
-                if (!assetsEl) return;
-
-                assetsEl.addEventListener('loaded', () => {
-                    arLoadingStatusText.textContent = "¡Portal listo! Presiona el botón para invocar.";
+                // ✅ LA SOLUCIÓN CLAVE:
+                // Esperamos a que la escena de A-Frame esté completamente cargada
+                sceneEl.addEventListener('loaded', () => {
+                    console.log("A-Frame Scene is fully loaded.");
+                    navigateTo('ar');
+                    document.getElementById('ar-loading-status-text').textContent = "¡Portal listo! Presiona el botón para invocar.";
+                    // Habilitamos el botón de entrada a AR solo cuando todo está listo.
                     sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
+                    sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
                 });
-                assetsEl.addEventListener('timeout', () => {
-                    arLoadingStatusText.textContent = "Error: No se pudieron cargar los artefactos mágicos.";
-                });
+                
+                // Manejo de errores de carga de assets
+                const assetsEl = sceneEl.querySelector('a-assets');
+                if(assetsEl) {
+                    assetsEl.addEventListener('timeout', () => {
+                        console.error("Asset loading timed out.");
+                        document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
+                    });
+                }
             }
 
             AFRAME.registerComponent('ar-logic', {
                 init: function() {
-                    this.sceneEl = this.el.sceneEl;
                     this.reticle = document.querySelector('#reticle');
                     this.boardContainer = document.querySelector('#board-container');
-                    this.boardPlaced = false;
-
+                    
                     this.onEnterVR = this.onEnterVR.bind(this);
                     this.onExitVR = this.onExitVR.bind(this);
                     this.onSelect = this.onSelect.bind(this);
                     this.handleGameClick = this.handleGameClick.bind(this);
 
-                    this.sceneEl.addEventListener('enter-vr', this.onEnterVR);
-                    this.sceneEl.addEventListener('exit-vr', this.onExitVR);
-                    this.sceneEl.addEventListener('select', this.onSelect);
-                    this.sceneEl.addEventListener('click', this.handleGameClick);
+                    this.el.sceneEl.addEventListener('enter-vr', this.onEnterVR);
+                    this.el.sceneEl.addEventListener('exit-vr', this.onExitVR);
+                    this.el.sceneEl.addEventListener('select', this.onSelect); 
+                    this.el.sceneEl.addEventListener('click', this.handleGameClick);
                 },
                 onEnterVR: function() {
-                    if (this.sceneEl.is('ar-mode')) {
+                    if (this.el.sceneEl.is('ar-mode')) {
                         document.getElementById('ar-instructions-ui').classList.remove('hidden');
                         buttons.exitAR.style.display = 'block';
+                        boardPlaced = false;
+                        this.reticle.setAttribute('visible', 'true'); // Make sure reticle is visible on entry
+                        this.reticle.setAttribute('ar-hit-test', 'target: #board-container');
                     }
                 },
-                onExitVR: function() { game.reset(); navigateTo('gameMode'); },
+                onExitVR: function() {
+                    // This event ensures we navigate away cleanly
+                    navigateTo('gameMode');
+                },
                 onSelect: function() {
-                    if (!this.boardPlaced && this.reticle.getAttribute('visible')) {
+                    if (!boardPlaced && this.reticle.getAttribute('visible')) {
+                        // Place the board at the reticle's position
+                        const reticleMatrix = this.reticle.object3D.matrixWorld;
+                        this.boardContainer.object3D.matrix.copy(reticleMatrix);
+
                         this.boardContainer.setAttribute('visible', 'true');
                         this.reticle.setAttribute('visible', 'false');
-                        this.reticle.removeAttribute('ar-hit-test');
-                        this.boardPlaced = true;
+                        this.reticle.removeAttribute('ar-hit-test'); 
                         boardPlaced = true;
+                        
                         document.getElementById('ar-instructions-ui').classList.add('hidden');
                         document.getElementById('game-status').style.display = 'block';
+                        
                         create3DBoard(this.boardContainer);
                         renderBoardFromFen(this.boardContainer);
                         updateGameStatus();
                     }
                 },
-                handleGameClick: function(evt) { if (this.boardPlaced) handleGameClick(evt); }
+                handleGameClick: function(evt) {
+                    if (boardPlaced) {
+                        handleGameClick(evt);
+                    }
+                }
             });
+
+            // --- Lógica del juego de ajedrez ---
+
+            function initializeLoadingScreen() {
+                const pieceLoader = document.getElementById('piece-loader');
+                const particleContainer = document.getElementById('particle-container');
+                pieceLoader.innerHTML = '';
+                particleContainer.innerHTML = '';
+                const pieces = [
+                    `<svg data-piece="king" viewBox="0 0 45 45"><path d="M22.5 11.63V6M20 8h5M22.5 25s4.5-7.5 3-10.5c0 0-1.5-3-3-3s-3 3-3 3c-1.5 3 3 10.5 3 10.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path></svg>`,
+                    `<svg data-piece="queen" viewBox="0 0 45 45"><path d="M9 13.5s1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5 3.5 4.5 3.5 4.5 1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke="#FFF"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path><circle cx="6" cy="12" r="1.2" fill="#FFF"></circle><circle cx="12.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="19.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="26.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="33" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="39" cy="12" r="1.2" fill="#FFF"></circle></svg>`,
+                    `<svg data-piece="rook" viewBox="0 0 45 45"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM12 15V9h7.5v6H12zM19.5 15V9h6v6h-6zM25.5 15V9H33v6h-7.5zM9 15h3v18H9V15zM33 15h3v18h-3V15z" stroke="#FFF" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFF"></path></svg>`,
+                    `<svg data-piece="knight" viewBox="0 0 45 45"><path d="M22 10c10.5 1 16.5 8 16 29H15c-2.5-4-3-7.5-1-11.5 3-7 12-10 12-10s-4 1-6 4s-3 6-2.5 8.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M24 18c.5-2.5 2.5-5 4.5-5.5s4.5-1.5 4.5-1.5s-2 .5-4 2.5s-2 4.5-2.5 6.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><circle cx="26" cy="14" r="2" fill="#FFF"></circle></svg>`
+                ];
+                pieceLoader.innerHTML = pieces.join('');
+                let currentPiece = 0;
+                const pieceElements = pieceLoader.querySelectorAll('svg');
+                pieceElements[currentPiece].classList.add('active');
+                setInterval(() => {
+                    pieceElements[currentPiece].classList.remove('active');
+                    currentPiece = (currentPiece + 1) % pieceElements.length;
+                    pieceElements[currentPiece].classList.add('active');
+                }, 2000);
+                for (let i = 0; i < 25; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.style.left = `${Math.random() * 100}%`;
+                    p.style.top = `${Math.random() * 100}%`;
+                    const size = Math.random() * 8 + 2;
+                    p.style.width = `${size}px`; p.style.height = `${size}px`;
+                    p.style.animationDelay = `${Math.random() * 10}s`;
+                    particleContainer.appendChild(p);
+                }
+            }
 
             function create3DBoard(parent) {
                 const boardSize = 0.6; const squareSize = boardSize / 8;
@@ -472,7 +499,8 @@
             }
             
             function renderBoardFromFen(parent) {
-                parent.querySelectorAll('.chess-piece').forEach(el => el.remove());
+                const boardGroup = parent.querySelector('#board-group') || parent;
+                boardGroup.querySelectorAll('.chess-piece').forEach(el => el.remove());
                 const boardSize = 0.6; const squareSize = boardSize / 8;
                 const offset = -boardSize/2 + squareSize/2;
                 game.board().forEach((row, i) => {
@@ -481,18 +509,16 @@
                         const pieceEl = document.createElement('a-entity');
                         pieceEl.classList.add('chess-piece');
                         pieceEl.dataset.square = piece.square;
-                        if (assetMap[selectedSet]?.[piece.color]?.[piece.type]) {
+                        if (assetMap[selectedSet]?.[piece.color]?.[piece.type]?.url) {
                             const modelData = assetMap[selectedSet][piece.color][piece.type];
                             pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
                             pieceEl.setAttribute('scale', modelData.scale);
                             if(modelData.rotation) pieceEl.setAttribute('rotation', modelData.rotation);
-                        } else {
-                            // Fallback a primitivas si no hay modelos
                         }
                         const x = offset + j * squareSize;
-                        const z = offset + i * squareSize;
-                        pieceEl.setAttribute('position', `${x} 0.02 ${z}`);
-                        parent.appendChild(pieceEl);
+                        const z = offset + (7-i) * squareSize; // Correct board orientation
+                        pieceEl.setAttribute('position', `${x} 0.01 ${z}`);
+                        boardGroup.appendChild(pieceEl);
                     });
                 });
             }
@@ -500,27 +526,39 @@
             function handleGameClick(evt) {
                 if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
                 const clickedEl = evt.target.closest('.chess-piece, .clickable-square, .legal-move-marker');
-                if (!clickedEl) { clearLegalMoves(); gameState = 'IDLE'; return; }
+                if (!clickedEl) { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; return; }
+                
                 if (gameState === 'IDLE') {
                     if (clickedEl.classList.contains('chess-piece')) {
                         const square = clickedEl.dataset.square;
                         const piece = game.get(square);
-                        if (piece && piece.color === game.turn()) selectPiece(clickedEl);
+                        if (piece && piece.color === game.turn()) {
+                            selectPiece(clickedEl);
+                        }
                     }
                 } else if (gameState === 'PIECE_SELECTED') {
-                    let toSquare = clickedEl.dataset.square;
+                    const toSquare = clickedEl.dataset.square;
                     if (toSquare) {
                         const fromSquare = selectedPieceEntity.dataset.square;
                         const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' });
                         if (move) {
                             movePiece();
                         } else {
-                            const piece = game.get(toSquare);
-                            if (piece && piece.color === game.turn() && document.querySelector(`.chess-piece[data-square="${toSquare}"]`)) {
-                                selectPiece(document.querySelector(`.chess-piece[data-square="${toSquare}"]`));
-                            } else { clearLegalMoves(); gameState = 'IDLE'; }
+                            const pieceOnTarget = game.get(toSquare);
+                            const targetEntity = document.querySelector(`.chess-piece[data-square="${toSquare}"]`);
+                            if (pieceOnTarget && targetEntity && pieceOnTarget.color === game.turn()) {
+                                selectPiece(targetEntity);
+                            } else { 
+                                clearLegalMoves(); 
+                                gameState = 'IDLE'; 
+                                selectedPieceEntity = null;
+                            }
                         }
-                    } else { clearLegalMoves(); gameState = 'IDLE'; }
+                    } else { 
+                        clearLegalMoves(); 
+                        gameState = 'IDLE'; 
+                        selectedPieceEntity = null;
+                    }
                 }
             }
 
@@ -534,21 +572,23 @@
                     const marker = document.createElement('a-cylinder');
                     marker.setAttribute('radius', '0.03'); marker.setAttribute('height', '0.005');
                     marker.setAttribute('material', 'color: #10B981; opacity: 0.6');
-                    marker.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                    marker.setAttribute('position', `${pos.x} 0.002 ${pos.z}`);
                     marker.dataset.square = move.to;
-                    marker.classList.add('legal-move-marker');
+                    marker.classList.add('legal-move-marker', 'clickable-square');
                     document.querySelector('#board-group').appendChild(marker);
                     legalMoveEntities.push(marker);
                 });
             }
 
             function clearLegalMoves() {
-                legalMoveEntities.forEach(e => e.parentNode.removeChild(e));
+                legalMoveEntities.forEach(e => e.parentNode && e.parentNode.removeChild(e));
                 legalMoveEntities = [];
             }
             
             function movePiece() {
-                clearLegalMoves(); gameState = 'IDLE';
+                clearLegalMoves(); 
+                gameState = 'IDLE';
+                selectedPieceEntity = null;
                 renderBoardFromFen(document.querySelector('#board-container'));
                 updateGameStatus();
                 if (!game.game_over() && gameMode === 'pva' && game.turn() !== playerColor) {
@@ -577,7 +617,7 @@
                  const boardSize = 0.6; const squareSize = boardSize / 8;
                  const offset = -boardSize/2 + squareSize/2;
                  const col = 'abcdefgh'.indexOf(square[0]);
-                 const row = 8 - parseInt(square[1]);
+                 const row = 8 - parseInt(square[1], 10);
                  return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
             }
         });
