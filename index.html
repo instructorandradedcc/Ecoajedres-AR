@@ -2,68 +2,75 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- CORREGIDO: user-scalable=no para evitar zoom accidental en móviles -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Ajedrez AR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        /* Estilos generales y para el modo AR */
+        html.ar-active, body.ar-active {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
         }
         .screen {
             display: none;
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             transition: opacity 0.5s ease-in-out;
             z-index: 10;
         }
-        .screen.active {
-            display: flex;
-        }
+        .screen.active { display: flex; }
         .selection-card, .board-card, .color-swatch, .mode-card {
             transition: all 0.3s ease;
             border: 4px solid transparent;
         }
         .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected {
-            border-color: #FBBF24; /* amber-400 */
+            border-color: #FBBF24;
             transform: scale(1.05);
         }
         #ar-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
             overflow: hidden;
         }
-        a-scene {
-            width: 100%;
-            height: 100%;
-        }
         .version {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            color: #9ca3af;
-            font-size: 0.8rem;
-            z-index: 100;
+            position: fixed; bottom: 10px; right: 10px;
+            color: #9ca3af; font-size: 0.8rem; z-index: 100;
         }
         .game-status {
-            position: fixed;
-            top: 20px;
-            left: 50%;
+            position: fixed; top: 20px; left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            z-index: 100;
-            font-size: 1.2rem;
-            display: none;
+            background-color: rgba(0,0,0,0.7); color: white;
+            padding: 10px 20px; border-radius: 20px;
+            z-index: 100; font-size: 1.2rem; display: none;
+        }
+        /* Estilos de ECOPIENSA integrados */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #scanning-ui {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 9991; display: flex;
+            justify-content: center; align-items: center;
+            pointer-events: none; background-color: rgba(0,0,0,0.3);
+            transition: opacity 0.3s;
+        }
+        #scanning-ui.hidden { opacity: 0; pointer-events: none; }
+        .scan-text {
+            padding: 8px 16px; background-color: rgba(0,0,0,0.6);
+            color: white; font-size: 1.1rem; border-radius: 8px;
         }
     </style>
 </head>
@@ -86,7 +93,7 @@
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter">
-                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><img src="https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/logo.png" alt="Harry Potter Set" class="h-32"></div>
+                <div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧙‍♂️</div>
                 <h3 class="text-2xl font-semibold mb-2">Wizard's Chess</h3>
                 <p class="text-stone-400">Piezas inspiradas en el ajedrez mágico.</p>
             </div>
@@ -142,26 +149,28 @@
     </div>
 
     <!-- Pantalla de AR -->
-    <div id="ar-screen" class="screen flex-col justify-center items-center bg-black">
-        <div id="instructions" class="text-center p-8 z-20 bg-black bg-opacity-80 rounded-lg">
-            <h2 class="text-3xl font-bold mb-4 text-amber-300">Prepara tu Cámara</h2>
-            <p class="mb-6 max-w-lg text-stone-200">Apunta al marcador para que aparezca el tablero.</p>
-            <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" target="_blank" class="inline-block underline text-amber-300">Descargar Marcador</a>
-            <img src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.png" class="w-48 h-auto mx-auto border-4 border-white rounded-lg mt-4">
+    <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
+        <div id="ar-container"></div> <!-- Contenedor principal de A-Frame -->
+        <!-- UI superpuesta sobre la vista AR -->
+        <div id="ar-ui-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none">
+            <button id="back-to-mode-btn" class="absolute top-5 left-5 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Salir</button>
+            <div id="scanning-ui" class="hidden">
+                <p class="scan-text">Apunte al marcador</p>
+            </div>
         </div>
-        <button id="back-to-mode-btn" class="absolute top-5 left-5 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30" style="display: none;">Salir</button>
-        <div id="ar-container"></div>
     </div>
     
+    <!-- Overlays de Carga -->
     <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 text-amber-200 flex flex-col items-center justify-center" style="display: none; z-index: 50;">
-        <span class="text-2xl font-bold animate-pulse mb-4">Cargando Escena AR...</span>
-        <span class="text-lg" id="loading-message">Cargando modelos 3D...</span>
+        <div class="loader mb-4"></div>
+        <p id="loading-message" class="text-lg">Cargando modelos 3D...</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "1.2.0";
+            // Cada vez que se realice una corrección o actualización, esta versión debe ser incrementada.
+            const APP_VERSION = "1.4.0"; 
 
             // Game state variables
             let game = new Chess();
@@ -194,16 +203,21 @@
             const modeCards = document.querySelectorAll('.mode-card');
             
             const arContainer = document.getElementById('ar-container');
-            const instructions = document.getElementById('instructions');
             const loadingOverlay = document.getElementById('loading-overlay');
             const gameStatusEl = document.getElementById('game-status');
+            const versionDisplay = document.getElementById('app-version');
+            const scanningUI = document.getElementById('scanning-ui');
             
             // User choices
             let selectedSet = null;
             let selectedBoard = null;
             let sceneEl = null;
+            
+            versionDisplay.textContent = `v${APP_VERSION}`;
+            
+            const CACHE_NAME = `ajedrez-ar-cache-v${APP_VERSION}`;
 
-            // Asset mapping for 3D models
+            // Asset mapping for 3D models.
             const assetMap = {
                 'harry-potter': {
                     w: {
@@ -217,9 +231,9 @@
                     b: {
                         p: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Pawn_Sytherin.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
                         r: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Rook_Dobby2.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
-                        n: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' }, // Reused, rotated
+                        n: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Knight_RWeasley.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' },
                         b: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Bishop_HPotter_Hollow.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
-                        q: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' }, // Reused, rotated
+                        q: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/Queen_Hermione.glb', scale: '0.05 0.05 0.05', rotation: '0 180 0' },
                         k: { url: 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/King_Voldemort.glb', scale: '0.05 0.05 0.05', rotation: '0 0 0' },
                     }
                 }
@@ -227,20 +241,21 @@
 
             // ---- Navigation Logic ----
             function navigateTo(screenName) {
+                if (sceneEl) {
+                    const mindarSystem = sceneEl.systems['mindar-image-system'];
+                    if (mindarSystem) mindarSystem.stop();
+                    sceneEl.pause();
+                    arContainer.innerHTML = '';
+                    sceneEl = null;
+                }
+                document.documentElement.classList.remove('ar-active');
+                document.body.classList.remove('ar-active');
+
                 Object.values(screens).forEach(s => s.classList.remove('active'));
                 if (screens[screenName]) screens[screenName].classList.add('active');
-                
-                if (screenName !== 'ar') {
-                    if (sceneEl) {
-                        sceneEl.pause();
-                        sceneEl.renderer.dispose();
-                        arContainer.innerHTML = '';
-                        sceneEl = null;
-                    }
-                    instructions.style.display = 'block';
-                    buttons.backToMode.style.display = 'none';
-                    gameStatusEl.style.display = 'none';
-                }
+
+                buttons.backToMode.style.display = 'none';
+                gameStatusEl.style.display = 'none';
             }
 
             buttons.start.addEventListener('click', () => navigateTo('selection'));
@@ -285,42 +300,77 @@
                 buttons.startGame.disabled = false;
             }));
 
-            buttons.startGame.addEventListener('click', () => {
+            buttons.startGame.addEventListener('click', async () => {
                 if(gameMode) {
                     navigateTo('ar');
-                    showLoading(true, "Iniciando partida...");
-                    setTimeout(() => {
-                        instructions.style.display = 'none';
-                        buttons.backToMode.style.display = 'block';
-                        gameStatusEl.style.display = 'block';
-                        setupARScene();
-                        showLoading(false);
-                    }, 1500);
+                    showLoading(true, "Cargando recursos...");
+                    await preloadARAssets(); // Espera a que los recursos estén listos
+                    showLoading(true, "Iniciando cámara...");
+                    setupARScene();
                 }
             });
 
             function showLoading(on, message = "") {
-                loadingOverlay.style.display = on ? 'flex' : 'none';
-                document.getElementById('loading-message').textContent = message;
+                const loadingMessage = document.getElementById('loading-message');
+                if (on) {
+                    loadingMessage.textContent = message;
+                    loadingOverlay.style.display = 'flex';
+                } else {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+            
+            // ---- Caching and Asset Preloading ----
+            async function fetchAndCache(url) {
+                const cache = await caches.open(CACHE_NAME);
+                const cachedResponse = await cache.match(url);
+                if (cachedResponse) return cachedResponse.blob();
+                
+                const networkResponse = await fetch(url);
+                if (networkResponse.ok) {
+                    await cache.put(url, networkResponse.clone());
+                    return networkResponse.blob();
+                }
+                throw new Error(`Failed to fetch ${url}`);
+            }
+
+            async function preloadARAssets() {
+                if (!assetMap[selectedSet]) return;
+
+                const urls = new Set();
+                Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
+                Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
+
+                const promises = Array.from(urls).map(url => fetchAndCache(url));
+                await Promise.all(promises);
             }
 
             // ---- AR and Game Logic ----
             function setupARScene() {
+                document.documentElement.classList.add('ar-active');
+                document.body.classList.add('ar-active');
+
                 sceneEl = document.createElement('a-scene');
-                sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;');
+                sceneEl.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card/card.mind; autoStart: false; uiLoading: no; uiError: no; uiScanning: no;');
                 sceneEl.setAttribute('color-space', 'sRGB');
                 sceneEl.setAttribute('renderer', 'colorManagement: true, physicallyCorrectLights');
                 sceneEl.setAttribute('vr-mode-ui', 'enabled: false');
                 sceneEl.setAttribute('embedded','');
 
-                // Preload assets
                 const assetsEl = document.createElement('a-assets');
                 if (assetMap[selectedSet]) {
-                    Object.values(assetMap[selectedSet].w).forEach(p => { assetsEl.innerHTML += `<a-asset-item id="${p.url}" src="${p.url}"></a-asset-item>`; });
-                    Object.values(assetMap[selectedSet].b).forEach(p => { assetsEl.innerHTML += `<a-asset-item id="${p.url}" src="${p.url}"></a-asset-item>`; });
+                    const urls = new Set();
+                    Object.values(assetMap[selectedSet].w).forEach(p => urls.add(p.url));
+                    Object.values(assetMap[selectedSet].b).forEach(p => urls.add(p.url));
+                    urls.forEach(url => {
+                        const assetItem = document.createElement('a-asset-item');
+                        assetItem.setAttribute('id', url);
+                        assetItem.setAttribute('src', url);
+                        assetsEl.appendChild(assetItem);
+                    });
                 }
                 sceneEl.appendChild(assetsEl);
-
+                
                 const cameraEl = document.createElement('a-camera');
                 cameraEl.setAttribute('position', '0 0 0');
                 cameraEl.setAttribute('look-controls', 'enabled: false');
@@ -328,12 +378,30 @@
 
                 const targetEntity = document.createElement('a-entity');
                 targetEntity.setAttribute('mindar-image-target', 'targetIndex: 0');
+                targetEntity.setAttribute('gesture-handler', ''); // Add gesture controls
                 
-                create3DBoard(targetEntity);
-                renderBoardFromFen(targetEntity);
+                const boardEntity = document.createElement('a-entity');
+                create3DBoard(boardEntity);
+                renderBoardFromFen(boardEntity);
+                targetEntity.appendChild(boardEntity);
                 
                 sceneEl.appendChild(targetEntity);
                 arContainer.appendChild(sceneEl);
+
+                sceneEl.addEventListener('loaded', () => {
+                    const mindarSystem = sceneEl.systems['mindar-image-system'];
+                    mindarSystem.start();
+                });
+
+                sceneEl.addEventListener('arReady', () => {
+                    showLoading(false);
+                    buttons.backToMode.style.display = 'block';
+                    gameStatusEl.style.display = 'block';
+                    scanningUI.classList.remove('hidden');
+                });
+                
+                sceneEl.addEventListener('targetFound', () => scanningUI.classList.add('hidden'));
+                sceneEl.addEventListener('targetLost', () => scanningUI.classList.remove('hidden'));
 
                 sceneEl.addEventListener('click', handleSceneClick);
                 updateGameStatus();
@@ -355,9 +423,7 @@
                         const x = -boardSize/2 + squareSize/2 + j * squareSize;
                         const z = -boardSize/2 + squareSize/2 + i * squareSize;
                         squareEl.setAttribute('position', `${x} -0.01 ${z}`);
-                        
-                        const squareID = 'abcdefgh'[j] + (8 - i);
-                        squareEl.dataset.square = squareID;
+                        squareEl.dataset.square = 'abcdefgh'[j] + (8 - i);
                         squareEl.classList.add('clickable-square');
                         boardGroup.appendChild(squareEl);
                     }
@@ -366,16 +432,12 @@
             }
             
             function renderBoardFromFen(parent) {
-                // Clear old pieces
                 parent.querySelectorAll('.chess-piece').forEach(el => el.remove());
-                
                 const boardSize = 1.4;
                 const squareSize = boardSize / 8;
                 const offset = -boardSize/2 + squareSize/2;
                 
-                const board = game.board();
-                
-                board.forEach((row, i) => {
+                game.board().forEach((row, i) => {
                     row.forEach((piece, j) => {
                         if (!piece) return;
                         
@@ -383,13 +445,12 @@
                         pieceEl.classList.add('chess-piece', 'clickable');
                         pieceEl.dataset.square = piece.square;
 
-                        if (assetMap[selectedSet]) {
+                        if (assetMap[selectedSet]?.[piece.color]?.[piece.type]) {
                             const modelData = assetMap[selectedSet][piece.color][piece.type];
-                            pieceEl.setAttribute('gltf-model', `url(${modelData.url})`);
+                            pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
                             pieceEl.setAttribute('scale', modelData.scale);
                             pieceEl.setAttribute('rotation', modelData.rotation);
-                        } else {
-                            // Fallback to primitives for futuristic set
+                        } else { // Fallback a primitivas
                             const primitive = getPrimitive(piece.type, piece.color);
                             pieceEl.setAttribute('geometry', primitive.geometry);
                             pieceEl.setAttribute('material', primitive.material);
@@ -397,7 +458,7 @@
                         
                         const x = offset + j * squareSize;
                         const z = offset + i * squareSize;
-                        pieceEl.setAttribute('position', `${x} 0 ${z}`);
+                        pieceEl.setAttribute('position', `${x} 0.05 ${z}`);
                         parent.appendChild(pieceEl);
                     });
                 });
@@ -405,7 +466,7 @@
 
             function handleSceneClick(evt) {
                 const target = evt.target;
-                if (game.turn() !== playerColor && gameMode === 'pva') return; // It's AI's turn
+                if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
 
                 if (gameState === 'IDLE') {
                     if (target.classList.contains('chess-piece')) {
@@ -416,29 +477,18 @@
                         }
                     }
                 } else if (gameState === 'PIECE_SELECTED') {
-                    let toSquare = null;
-                    if(target.classList.contains('chess-piece')) {
-                        toSquare = target.dataset.square;
-                    } else if (target.classList.contains('legal-move-marker')) {
-                        toSquare = target.dataset.square;
-                    }
-                    
+                    let toSquare = target.dataset.square;
                     if (toSquare) {
                         const fromSquare = selectedPieceEntity.dataset.square;
-                        const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' }); // Auto-promote to queen
-                        
+                        const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' });
                         if (move) {
-                            movePiece(fromSquare, toSquare);
+                            movePiece();
                         } else {
-                            // Invalid move, deselect
                             clearLegalMoves();
-                            selectedPieceEntity = null;
                             gameState = 'IDLE';
                         }
                     } else {
-                        // Clicked somewhere else, deselect
                         clearLegalMoves();
-                        selectedPieceEntity = null;
                         gameState = 'IDLE';
                     }
                 }
@@ -453,14 +503,13 @@
                 moves.forEach(move => {
                     const pos = squareToPosition(move.to);
                     const marker = document.createElement('a-cylinder');
-                    marker.setAttribute('radius', 0.05);
+                    marker.setAttribute('radius', 0.07);
                     marker.setAttribute('height', 0.01);
                     marker.setAttribute('color', 'green');
                     marker.setAttribute('opacity', '0.5');
-                    marker.setAttribute('position', `${pos.x} 0.01 ${pos.z}`);
-                    marker.classList.add('legal-move-marker', 'clickable');
+                    marker.setAttribute('position', `${pos.x} 0.005 ${pos.z}`);
                     marker.dataset.square = move.to;
-                    sceneEl.querySelector('[mindar-image-target]').appendChild(marker);
+                    sceneEl.querySelector('[mindar-image-target] a-entity').appendChild(marker);
                     legalMoveEntities.push(marker);
                 });
             }
@@ -470,26 +519,25 @@
                 legalMoveEntities = [];
             }
             
-            function movePiece(from, to) {
+            function movePiece() {
                 clearLegalMoves();
                 gameState = 'IDLE';
-                renderBoardFromFen(sceneEl.querySelector('[mindar-image-target]'));
+                renderBoardFromFen(sceneEl.querySelector('[mindar-image-target] a-entity'));
                 updateGameStatus();
 
                 if (game.game_over()) return;
 
                 if (gameMode === 'pva' && game.turn() !== playerColor) {
-                    // AI's turn
                     setTimeout(makeAIMove, 500);
                 }
             }
             
             function makeAIMove() {
                 const moves = game.moves();
+                if (moves.length === 0) return;
                 const move = moves[Math.floor(Math.random() * moves.length)];
                 game.move(move);
-                renderBoardFromFen(sceneEl.querySelector('[mindar-image-target]'));
-                updateGameStatus();
+                movePiece();
             }
 
             function updateGameStatus() {
@@ -497,19 +545,18 @@
                 const moveColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
 
                 if (game.in_checkmate()) {
-                    status = `Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`;
+                    status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`;
                 } else if (game.in_draw()) {
                     status = 'Empate';
                 } else {
                     status = `Turno de las ${moveColor}`;
                     if (game.in_check()) {
-                        status += ' - Jaque!';
+                        status += ' - ¡Jaque!';
                     }
                 }
                 gameStatusEl.textContent = status;
             }
 
-            // Helper functions
             function squareToPosition(square) {
                 const boardSize = 1.4;
                 const squareSize = boardSize / 8;
@@ -519,10 +566,7 @@
                 return { x: offset + col * squareSize, z: offset + row * squareSize };
             }
 
-            // Fallback for futuristic set
             function getPrimitive(type, color) {
-                // Simplified from previous version
-                const key = type + (color === 'b' ? '_b' : '');
                 const style = {
                     p_w: { geometry: 'primitive: cylinder; height: 0.1; radius: 0.04', material: 'color: #E5E7EB' },
                     r_w: { geometry: 'primitive: box; width: 0.1; height: 0.12; depth: 0.1', material: 'color: #E5E7EB' },
@@ -537,12 +581,53 @@
                     q_b: { geometry: 'primitive: sphere; radius: 0.08', material: 'color: #6B7280' },
                     k_b: { geometry: 'primitive: dodecahedron; radius: 0.1', material: 'color: #1F2937' }
                 };
-                return style[type + '_' + color] || style['p' + '_' + color];
+                return style[`${type}_${color}`] || style['p_w'];
             }
+            
+            AFRAME.registerComponent('gesture-handler', {
+                init: function () {
+                    this.scale = 1; this.rotationY = 0;
+                    this.el.sceneEl.addEventListener('touchstart', this.handleTouchStart.bind(this));
+                    this.el.sceneEl.addEventListener('touchmove', this.handleTouchMove.bind(this));
+                    this.el.sceneEl.addEventListener('touchend', this.handleTouchEnd.bind(this));
+                    this.touchStart = {};
+                },
+                handleTouchStart: function (e) {
+                    if (e.touches.length === 2) {
+                        this.touchStart.distance = this.getDistance(e.touches[0], e.touches[1]);
+                        this.touchStart.angle = this.getAngle(e.touches[0], e.touches[1]);
+                    }
+                },
+                handleTouchMove: function (e) {
+                    if (e.touches.length === 2) {
+                        e.preventDefault();
+                        const newDistance = this.getDistance(e.touches[0], e.touches[1]);
+                        this.scale *= newDistance / this.touchStart.distance;
+                        this.el.object3D.scale.set(this.scale, this.scale, this.scale);
+                        this.touchStart.distance = newDistance;
+
+                        const newAngle = this.getAngle(e.touches[0], e.touches[1]);
+                        this.rotationY += newAngle - this.touchStart.angle;
+                        this.el.object3D.rotation.y = this.rotationY;
+                        this.touchStart.angle = newAngle;
+                    }
+                },
+                handleTouchEnd: function () { this.touchStart = {}; },
+                getDistance: (t1, t2) => Math.hypot(t1.pageX - t2.pageX, t1.pageY - t2.pageY),
+                getAngle: (t1, t2) => Math.atan2(t2.pageY - t1.pageY, t2.pageX - t1.pageX)
+            });
+
+            window.addEventListener('resize', () => {
+                if (sceneEl && sceneEl.renderer) {
+                    sceneEl.renderer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
         });
     </script>
 </body>
 </html>
+
+
 
 
 
