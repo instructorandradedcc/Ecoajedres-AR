@@ -15,14 +15,9 @@
         html.ar-active, body.ar-active { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }
         .screen { 
             display: none; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
             width: 100%; 
             min-height: 100vh; 
-            overflow-y: auto; 
             transition: opacity 0.5s ease-in-out; 
-            z-index: 10; 
             padding-bottom: 8rem; 
         }
         .screen.active { display: flex; }
@@ -67,11 +62,11 @@
         
         .a-enter-vr-button { position: fixed !important; bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important; background-color: #10B991 !important; color: white !important; border: none !important; border-radius: 9999px !important; padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important; }
 
-        /* Animaciones para la pantalla de carga AR (efecto "Doctor Strange") */
+        /* Animaciones para la pantalla de carga AR (efecto "Doctor Strange") - MEJORADO */
         #ar-loading-visual {
             position: relative;
-            width: 150px; /* Tamaño base del portal */
-            height: 150px;
+            width: 180px; /* Tamaño base del portal */
+            height: 180px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -82,22 +77,30 @@
             position: absolute;
             border: 5px solid transparent;
             border-radius: 50%;
-            animation: portal-spin 8s linear infinite, portal-pulse 2s ease-in-out infinite;
-            filter: drop-shadow(0 0 15px #facc15) drop-shadow(0 0 30px #fde047);
+            filter: drop-shadow(0 0 10px #facc15) drop-shadow(0 0 25px #fde047);
         }
 
-        .portal-ring-outer {
-            width: 150px; height: 150px;
+        .portal-ring-1 {
+            width: 180px; height: 180px;
             border-top-color: #fde047;
             border-right-color: #facc15;
+            animation: portal-spin 8s linear infinite, portal-pulse 2s ease-in-out infinite;
+        }
+
+        .portal-ring-2 {
+            width: 150px; height: 150px;
+            border-bottom-color: #fde047;
+            border-left-color: #facc15;
+            animation: portal-spin-reverse 10s linear infinite, portal-pulse 2.2s ease-in-out infinite;
             animation-delay: -0.5s;
         }
 
-        .portal-ring-inner {
-            width: 100px; height: 100px;
-            border-bottom-color: #fde047;
-            border-left-color: #facc15;
-            animation-delay: -1.5s;
+        .portal-ring-3 {
+            width: 120px; height: 120px;
+            border-top-color: #facc15;
+            border-left-color: #fde047;
+            animation: portal-spin 12s linear infinite, portal-pulse 2.5s ease-in-out infinite;
+            animation-delay: -1s;
         }
         
         .floating-king-icon {
@@ -110,6 +113,11 @@
         @keyframes portal-spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes portal-spin-reverse {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
         }
 
         @keyframes portal-pulse {
@@ -133,8 +141,7 @@
     <div id="app-version" class="version"></div>
     <div id="game-status" class="game-status"></div>
 
-    <!-- Pantallas de UI -->
-    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+Mágico');">
+    <!-- Pantallas de UI --><div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://placehold.co/1200x800/1c1917/f5f5f4?text=Ajedrez+Mágico');">
         <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Duelo de Ajedrez Mágico</h1>
         <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Invoca un tablero de ajedrez 3D en tu propio entorno.</p>
         <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar Duelo</button>
@@ -152,7 +159,7 @@
         </div>
     </div>
 
-    <div id="selection-screen" class="screen flex-col items-center p-8 bg-stone-800">
+    <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Ejército</h2><p class="text-stone-300">Elige el estilo de piezas para tu partida.</p></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧙‍♂️</div><h3 class="text-2xl font-semibold mb-2">Ajedrez Mágico</h3><p class="text-stone-400">Piezas inspiradas en el mundo de los magos.</p></div>
@@ -161,7 +168,7 @@
         <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
     </div>
     
-    <div id="board-selection-screen" class="screen flex-col items-center p-8 bg-stone-800">
+    <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2><p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p></div>
         <div class="max-w-4xl w-full">
             <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
@@ -176,7 +183,7 @@
         <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
     </div>
 
-    <div id="game-mode-screen" class="screen flex-col items-center p-8 bg-stone-800">
+    <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
         <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Duelo</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
             <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div><h3 class="text-2xl font-semibold">Estratega Solitario (vs. Oráculo)</h3></div>
@@ -200,8 +207,9 @@
         <div class="w-full max-w-lg z-10 flex flex-col items-center">
             <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Abriendo Portal...</h2>
             <div id="ar-loading-visual">
-                <div class="portal-ring portal-ring-outer"></div>
-                <div class="portal-ring portal-ring-inner"></div>
+                <div class="portal-ring portal-ring-1"></div>
+                <div class="portal-ring portal-ring-2"></div>
+                <div class="portal-ring portal-ring-3"></div>
                 <div class="floating-king-icon text-8xl text-amber-300">♔</div>
             </div>
             <p id="ar-loading-status-text" class="text-stone-300 max-w-xl mb-6">Alineando el plano astral...</p>
@@ -739,7 +747,6 @@
     </script>
 </body>
 </html>
-
 
 
 
