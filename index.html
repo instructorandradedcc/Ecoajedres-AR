@@ -198,7 +198,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.3.0"; // Versión con inicialización AR definitiva
+            const APP_VERSION = "3.4.0"; // Versión con inicialización AR robusta
             document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
             // --- Estado del juego y variables globales ---
@@ -333,10 +333,14 @@
                     `<a-asset-item id="${url}" src="${url}" response-type="arraybuffer" crossorigin="anonymous"></a-asset-item>`
                 ).join('');
 
+                // ✅ LA CORRECCIÓN CLAVE ESTÁ AQUÍ:
+                // Se cambiaron 'requiredFeatures' a 'optionalFeatures' para máxima compatibilidad.
+                // Esto evita que la sesión de AR falle si el dispositivo no soporta una función específica,
+                // permitiendo que la cámara se abra correctamente.
                 const sceneHTML = `
                     <a-scene id="ar-scene" 
                         vr-mode-ui="enabled: false;" 
-                        webxr="requiredFeatures: hit-test, local-floor; optionalFeatures: dom-overlay; overlayElement: #ar-ui-overlay;" 
+                        webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #ar-ui-overlay;" 
                         renderer="colorManagement: true; physicallyCorrectLights: true;"
                         ar-logic>
                         <a-assets timeout="45000">${assetsContent}</a-assets>
@@ -355,38 +359,32 @@
                 
                 arContainer.innerHTML = sceneHTML;
                 
-                // ✅ LA SOLUCIÓN DEFINITIVA:
-                // Esperamos a que el navegador procese el nuevo HTML y luego buscamos la escena.
                 setTimeout(() => {
                     sceneEl = document.getElementById('ar-scene');
                     
                     if (sceneEl) {
-                        // Ahora, escuchamos el evento 'loaded' de la PROPIA ESCENA.
-                        // Este evento solo se dispara cuando A-Frame ha terminado de inicializar TODO.
                         sceneEl.addEventListener('loaded', () => {
                             console.log("A-Frame SCENE is fully loaded. It is now safe to interact with.");
                             navigateTo('ar');
                             document.getElementById('ar-loading-status-text').textContent = "¡Portal listo! Presiona el botón para invocar.";
                             
-                            // En este punto, es 100% seguro manipular la escena.
                             sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
                             sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
                         });
 
-                        // El manejador de error para los assets sigue siendo útil.
                         const assetsEl = sceneEl.querySelector('a-assets');
                         if (assetsEl) {
-                             assetsEl.addEventListener('timeout', () => {
-                                console.error("Asset loading timed out.");
-                                document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
-                            });
+                                assetsEl.addEventListener('timeout', () => {
+                                    console.error("Asset loading timed out.");
+                                    document.getElementById('ar-loading-status-text').textContent = "Error: La magia se desvaneció (los modelos no cargaron a tiempo).";
+                                });
                         }
 
                     } else {
                         console.error("Fatal Error: Could not find the A-Frame scene element after creation.");
                         document.getElementById('ar-loading-status-text').textContent = "Error fatal al crear la escena AR.";
                     }
-                }, 0); // Un timeout de 0ms es suficiente para que esto funcione.
+                }, 0); 
             }
 
             AFRAME.registerComponent('ar-logic', {
@@ -406,6 +404,7 @@
                 },
                 onEnterVR: function() {
                     if (this.el.sceneEl.is('ar-mode')) {
+                        console.log("AR session started successfully.");
                         document.getElementById('ar-instructions-ui').classList.remove('hidden');
                         buttons.exitAR.style.display = 'block';
                         boardPlaced = false;
@@ -420,15 +419,10 @@
                 },
                 onSelect: function() {
                     if (!boardPlaced && this.reticle.getAttribute('visible')) {
-                        // Obtenemos la posición y rotación del retículo y la aplicamos al tablero
                         this.reticle.object3D.updateWorldMatrix(true, false);
                         const position = this.reticle.object3D.position;
-                        const rotation = this.reticle.object3D.rotation;
-
+                        
                         this.boardContainer.setAttribute('position', position);
-                        // Opcional: Alinear la rotación del tablero con la superficie
-                        // this.boardContainer.setAttribute('rotation', {x: 0, y: rotation.y, z: 0});
-
                         this.boardContainer.setAttribute('visible', 'true');
                         this.reticle.setAttribute('visible', 'false');
                         boardPlaced = true;
@@ -485,7 +479,6 @@
                 const boardSize = 0.6; const squareSize = boardSize / 8;
                 const boardGroup = document.createElement('a-entity');
                 boardGroup.setAttribute('id', 'board-group');
-                // El grupo de tablero ahora no tiene posición, ya que el padre (board-container) ya está posicionado.
                 const boardBase = document.createElement('a-box');
                 boardBase.setAttribute('width', boardSize + 0.04); boardBase.setAttribute('height', 0.02);
                 boardBase.setAttribute('depth', boardSize + 0.04); boardBase.setAttribute('color', '#4a2a15');
@@ -624,16 +617,17 @@
             }
 
             function squareToPosition(square) {
-                 const boardSize = 0.6; const squareSize = boardSize / 8;
-                 const offset = -boardSize/2 + squareSize/2;
-                 const col = 'abcdefgh'.indexOf(square[0]);
-                 const row = 8 - parseInt(square[1], 10);
-                 return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
+                const boardSize = 0.6; const squareSize = boardSize / 8;
+                const offset = -boardSize/2 + squareSize/2;
+                const col = 'abcdefgh'.indexOf(square[0]);
+                const row = 8 - parseInt(square[1], 10);
+                return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
             }
         });
     </script>
 </body>
 </html>
+
 
 
 
