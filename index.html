@@ -3,132 +3,123 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>EcoAjedrez 3D & AR - Gamer Prototype</title>
+  <title>EcoAjedrez 3D & AR - v2.0 Jugable</title>
   <style>
     :root {
-      --bg-panel: rgba(15, 23, 42, 0.85);
+      --bg-panel: rgba(15, 23, 42, 0.88);
       --accent: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.4);
       --text: #f8fafc;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: var(--text); }
-    
-    /* Video de fondo para modo AR Fallback */
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: var(--text); touch-action: none; }
+
     #ar-video {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover; z-index: 1; display: none;
+      object-fit: cover; z-index: 1; display: none; pointer-events: none;
     }
     #canvas-container {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
     }
 
-    /* HUD Gamer Superior */
+    /* HUD Superior */
     .hud-top {
-      position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10;
-      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      position: fixed; top: 10px; left: 10px; right: 10px; z-index: 10;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
       pointer-events: none;
     }
     .hud-card {
       background: var(--bg-panel); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-      padding: 10px 16px; pointer-events: auto;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.18); border-radius: 12px;
+      padding: 10px 14px; pointer-events: auto;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
     }
     .title-gamer {
-      font-weight: 800; font-size: 1.1rem; letter-spacing: 1px;
-      background: linear-gradient(90deg, #34d399, #3b82f6);
+      font-weight: 900; font-size: 1.05rem; letter-spacing: 1px;
+      background: linear-gradient(90deg, #34d399, #38bdf8);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     .status-badge {
-      font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;
+      font-size: 0.85rem; color: #fde047; font-weight: 700; margin-top: 3px;
     }
 
-    /* Panel Lateral de Configuración */
+    /* Panel Lateral */
     .hud-sidebar {
-      position: fixed; top: 90px; left: 12px; z-index: 10;
-      width: 270px; max-height: calc(100vh - 180px); overflow-y: auto;
-      display: flex; flex-direction: column; gap: 10px;
+      position: fixed; top: 82px; left: 10px; z-index: 10;
+      width: 245px; max-height: calc(100vh - 165px); overflow-y: auto;
+      display: flex; flex-direction: column; gap: 8px;
     }
-    .control-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
-    .control-group label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    .control-group label { font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
     select, input[type="text"], button {
-      background: rgba(30, 41, 59, 0.9); color: #fff;
-      border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
-      padding: 8px 10px; font-size: 0.85rem; outline: none; transition: 0.2s;
+      background: rgba(30, 41, 59, 0.95); color: #fff;
+      border: 1px solid rgba(255,255,255,0.22); border-radius: 8px;
+      padding: 7px 10px; font-size: 0.82rem; outline: none;
     }
-    select:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    button { cursor: pointer; font-weight: 700; transition: 0.15s; }
+    button:active { transform: scale(0.97); }
+    .btn-primary { background: linear-gradient(135deg, #10b981, #059669); border: none; }
+    .btn-ar { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; }
     
-    .btn-primary {
-      background: linear-gradient(135deg, #10b981, #059669);
-      border: none; font-weight: 700; cursor: pointer; text-align: center;
-    }
-    .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
-    .btn-ar {
-      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-      border: none; font-weight: 700; cursor: pointer;
-    }
-    .color-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
-    input[type="color"] {
-      width: 48%; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;
-    }
+    .color-row { display: flex; gap: 8px; }
+    input[type="color"] { width: 50%; height: 30px; border: none; border-radius: 6px; cursor: pointer; background: none; }
 
-    /* Barra Inferior de Comando por Teclado */
+    /* Barra Inferior Teclado */
     .hud-bottom {
-      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
       z-index: 10; display: flex; gap: 8px; align-items: center;
-      width: min(95%, 500px);
+      width: min(94%, 460px);
     }
     .hud-bottom input { flex: 1; }
 
-    @media (max-width: 640px) {
-      .hud-sidebar { width: 210px; font-size: 0.8rem; }
+    /* Guía rápida flotante */
+    .help-tip {
+      font-size: 0.72rem; color: #cbd5e1; line-height: 1.3;
+      border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;
+    }
+
+    @media (max-width: 600px) {
+      .hud-sidebar { width: 195px; padding: 8px 10px; }
+      .title-gamer { font-size: 0.9rem; }
     }
   </style>
 
-  <!-- Librería de Reglas Oficiales de Ajedrez (Chess.js) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <!-- Three.js + Controles + GLTFLoader para cargar tus modelos de Ecoajedres-AR -->
+  <!-- Three.js y OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-  <!-- Video para Cámara de Realidad Aumentada -->
   <video id="ar-video" autoplay playsinline muted></video>
-  
-  <!-- Contenedor 3D -->
   <div id="canvas-container"></div>
 
   <!-- HUD Superior -->
   <div class="hud-top">
     <div class="hud-card">
       <div class="title-gamer" id="ui-title">ECOAJEDREZ 3D AR</div>
-      <div class="status-badge" id="ui-status">Turno: Blancas | Selecciona una ficha</div>
+      <div class="status-badge" id="ui-status">🟢 Turno: BLANCAS (Toca una pieza blanca)</div>
     </div>
-    <div class="hud-card" style="display:flex; gap:8px; align-items:center;">
-      <select id="lang-select" aria-label="Idioma">
-        <option value="es">🇪🇸 Español</option>
-        <option value="en">🇺🇸 English</option>
-        <option value="zh">🇨🇳 中文 (Mandarín)</option>
+    <div class="hud-card" style="display:flex; gap:6px; align-items:center;">
+      <select id="lang-select">
+        <option value="es">🇪🇸 ES</option>
+        <option value="en">🇺🇸 EN</option>
+        <option value="zh">🇨🇳 中文</option>
       </select>
-      <button class="btn-ar" id="btn-toggle-ar">📷 Modo AR</button>
+      <button class="btn-ar" id="btn-toggle-ar">📷 AR</button>
     </div>
   </div>
 
-  <!-- Panel de Configuración Gamer -->
+  <!-- Panel Lateral -->
   <div class="hud-sidebar hud-card">
     <div class="control-group">
       <label id="lbl-mode">Modo de Juego</label>
       <select id="game-mode">
         <option value="ai">🤖 Vs Computadora (IA)</option>
-        <option value="pvp">⚔️ Versus (2 Jugadores)</option>
+        <option value="pvp">⚔️ 2 Jugadores (Versus)</option>
       </select>
     </div>
 
-    <div class="control-group" id="ai-level-group">
-      <label id="lbl-rank">Rango FIDE (Dificultad)</label>
+    <div class="control-group">
+      <label id="lbl-rank">Nivel Ajedrecista (FIDE)</label>
       <select id="ai-rank">
         <option value="1">🌱 Principiante (600 ELO)</option>
         <option value="2" selected>🛡️ Intermedio (1200 ELO)</option>
@@ -142,103 +133,182 @@
       <label id="lbl-biome">Bioma del Tablero</label>
       <select id="board-biome">
         <option value="classic">🏁 Clásico (Blanco y Negro)</option>
-        <option value="jungle">🌿 Selva Mágica (Pasto Rojo/Blanco)</option>
+        <option value="jungle">🌿 Selva (Pasto Rojo/Blanco)</option>
       </select>
     </div>
 
     <div class="control-group">
-      <label id="lbl-style">Estilo de Piezas</label>
+      <label id="lbl-style">Fichas 3D</label>
       <select id="piece-style">
-        <option value="classic">♟️ Clásico 3D Torneado</option>
-        <option value="wizard">🧙‍♂️ Magos / Fantasía (Harry Potter)</option>
+        <option value="wizard" selected>🧙‍♂️ Mágico (Harry Potter)</option>
+        <option value="classic">♟️ Clásico Torneo</option>
       </select>
     </div>
 
     <div class="control-group">
-      <label id="lbl-colors">Colores Gamer (Bando 1 / Bando 2)</label>
+      <label id="lbl-colors">Colores Gamer (Bando 1 / 2)</label>
       <div class="color-row">
-        <input type="color" id="color-white" value="#f8fafc" title="Color Jugador 1" />
-        <input type="color" id="color-black" value="#1e293b" title="Color Jugador 2" />
+        <input type="color" id="color-white" value="#f8fafc" />
+        <input type="color" id="color-black" value="#dc2626" />
       </div>
     </div>
 
-    <button class="btn-primary" id="btn-reset">🔄 Nueva Partida</button>
+    <button class="btn-primary" id="btn-reset">🔄 Reiniciar Partida</button>
+    <div class="help-tip" id="ui-help">
+      💡 <b>Cómo jugar:</b> Toca una ficha tuya y luego toca una casilla iluminada en verde/rojo. Arrastra para rotar la cámara.
+    </div>
   </div>
 
-  <!-- HUD Inferior: Entrada por Teclado -->
+  <!-- Entrada por Teclado -->
   <div class="hud-bottom hud-card">
-    <input type="text" id="keyboard-move" placeholder="Teclado: ej. e2e4 o g1f3 + Enter" />
+    <input type="text" id="keyboard-move" placeholder="Teclado: ej. e2e4 + Enter" />
     <button class="btn-primary" id="btn-move-key">Mover</button>
   </div>
 
   <script>
-    /**************************************************************
-     * 1. INTERNACIONALIZACIÓN (Español, Inglés, Chino Mandarín)
-     **************************************************************/
-    const I18N = {
-      es: {
-        title: "ECOAJEDREZ 3D AR",
-        turnW: "Turno: Blancas",
-        turnB: "Turno: Negras",
-        check: " ¡JAQUE!",
-        checkmate: "🏆 ¡JAQUE MATE!",
-        draw: "🤝 ¡EMPATE!",
-        mode: "Modo de Juego",
-        rank: "Rango FIDE (Dificultad)",
-        biome: "Bioma del Tablero",
-        style: "Estilo de Piezas",
-        colors: "Colores Gamer (Bando 1 / 2)",
-        reset: "🔄 Nueva Partida",
-        arBtn: "📷 Modo AR",
-        keyPlaceholder: "Teclado: ej. e2e4 o g1f3 + Enter",
-        moveBtn: "Mover"
-      },
-      en: {
-        title: "ECOCHESS 3D AR",
-        turnW: "Turn: White",
-        turnB: "Turn: Black",
-        check: " CHECK!",
-        checkmate: "🏆 CHECKMATE!",
-        draw: "🤝 DRAW!",
-        mode: "Game Mode",
-        rank: "FIDE Rank (Difficulty)",
-        biome: "Board Biome",
-        style: "Piece Style",
-        colors: "Gamer Colors (Side 1 / 2)",
-        reset: "🔄 New Game",
-        arBtn: "📷 AR Mode",
-        keyPlaceholder: "Keyboard: e.g. e2e4 or g1f3 + Enter",
-        moveBtn: "Move"
-      },
-      zh: {
-        title: "生态国际象棋 3D AR",
-        turnW: "回合：白方",
-        turnB: "回合：黑方",
-        check: " 将军！",
-        checkmate: "🏆 将死！比赛结束",
-        draw: "🤝 平局！",
-        mode: "游戏模式",
-        rank: "棋手等级 (难度)",
-        biome: "棋盘生态主题",
-        style: "棋子风格",
-        colors: "自定义颜色 (白 / 黑)",
-        reset: "🔄 重新开始",
-        arBtn: "📷 增强现实 (AR)",
-        keyPlaceholder: "键盘输入: 例如 e2e4 + 回车",
-        moveBtn: "移动"
-      }
-    };
-    let currentLang = 'es';
+    /********************************************************************
+     * 1. MOTOR DE AJEDREZ AUTÓNOMO (SIN DEPENDENCIAS EXTERNAS QUE FALLEN)
+     ********************************************************************/
+    class ChessEngine {
+      constructor() { this.reset(); }
 
-    /**************************************************************
-     * 2. MOTOR DE REGLAS Y ESCENA THREE.JS
-     **************************************************************/
-    const game = new Chess();
+      reset() {
+        this.board = [
+          [{t:'r',c:'b'},{t:'n',c:'b'},{t:'b',c:'b'},{t:'q',c:'b'},{t:'k',c:'b'},{t:'b',c:'b'},{t:'n',c:'b'},{t:'r',c:'b'}],
+          [{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'},{t:'p',c:'b'}],
+          [null,null,null,null,null,null,null,null],
+          [null,null,null,null,null,null,null,null],
+          [null,null,null,null,null,null,null,null],
+          [null,null,null,null,null,null,null,null],
+          [{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'},{t:'p',c:'w'}],
+          [{t:'r',c:'w'},{t:'n',c:'w'},{t:'b',c:'w'},{t:'q',c:'w'},{t:'k',c:'w'},{t:'b',c:'w'},{t:'n',c:'w'},{t:'r',c:'w'}]
+        ];
+        this.turn = 'w';
+        this.winner = null;
+      }
+
+      sqToRC(sq) {
+        if (!sq || sq.length !== 2) return null;
+        const c = sq.charCodeAt(0) - 97;
+        const r = 8 - parseInt(sq[1], 10);
+        if (r < 0 || r > 7 || c < 0 || c > 7) return null;
+        return { r, c };
+      }
+
+      rcToSq(r, c) { return String.fromCharCode(97 + c) + (8 - r); }
+
+      getPiece(sq) {
+        const rc = this.sqToRC(sq);
+        return rc ? this.board[rc.r][rc.c] : null;
+      }
+
+      // Obtiene todos los movimientos válidos de una casilla
+      getMovesForSquare(sq) {
+        const rc = this.sqToRC(sq);
+        if (!rc) return [];
+        const p = this.board[rc.r][rc.c];
+        if (!p || p.c !== this.turn || this.winner) return [];
+
+        const moves = [];
+        const { r, c } = rc;
+        const dir = p.c === 'w' ? -1 : 1;
+        const startRow = p.c === 'w' ? 6 : 1;
+
+        const addMove = (nr, nc) => {
+          if (nr < 0 || nr > 7 || nc < 0 || nc > 7) return false;
+          const target = this.board[nr][nc];
+          if (!target) {
+            moves.push({ from: sq, to: this.rcToSq(nr, nc), captured: null });
+            return true;
+          } else if (target.c !== p.c) {
+            moves.push({ from: sq, to: this.rcToSq(nr, nc), captured: target.t });
+            return false;
+          }
+          return false;
+        };
+
+        if (p.t === 'p') {
+          // Paso adelante
+          if (r + dir >= 0 && r + dir <= 7 && !this.board[r + dir][c]) {
+            moves.push({ from: sq, to: this.rcToSq(r + dir, c), captured: null });
+            // Doble paso inicial
+            if (r === startRow && !this.board[r + dir * 2][c]) {
+              moves.push({ from: sq, to: this.rcToSq(r + dir * 2, c), captured: null });
+            }
+          }
+          // Capturas diagonales
+          [-1, 1].forEach(dc => {
+            const nr = r + dir, nc = c + dc;
+            if (nr >= 0 && nr <= 7 && nc >= 0 && nc <= 7) {
+              const t = this.board[nr][nc];
+              if (t && t.c !== p.c) moves.push({ from: sq, to: this.rcToSq(nr, nc), captured: t.t });
+            }
+          });
+        } else if (p.t === 'n') {
+          [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([dr,dc]) => addMove(r+dr, c+dc));
+        } else if (p.t === 'k') {
+          [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([dr,dc]) => addMove(r+dr, c+dc));
+        } else {
+          const dirs = [];
+          if (p.t === 'r' || p.t === 'q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+          if (p.t === 'b' || p.t === 'q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+          dirs.forEach(([dr, dc]) => {
+            for (let step = 1; step < 8; step++) {
+              if (!addMove(r + dr * step, c + dc * step)) break;
+            }
+          });
+        }
+        return moves;
+      }
+
+      getAllMoves() {
+        const all = [];
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = this.board[r][c];
+            if (p && p.c === this.turn) {
+              all.push(...this.getMovesForSquare(this.rcToSq(r, c)));
+            }
+          }
+        }
+        return all;
+      }
+
+      move(fromSq, toSq) {
+        const legal = this.getMovesForSquare(fromSq).find(m => m.to === toSq);
+        if (!legal) return null;
+
+        const f = this.sqToRC(fromSq);
+        const t = this.sqToRC(toSq);
+        const movingPiece = this.board[f.r][f.c];
+        const targetPiece = this.board[t.r][t.c];
+
+        // Coronación automática a Reina
+        if (movingPiece.t === 'p' && (t.r === 0 || t.r === 7)) {
+          movingPiece.t = 'q';
+        }
+
+        if (targetPiece && targetPiece.t === 'k') {
+          this.winner = movingPiece.c;
+        }
+
+        this.board[t.r][t.c] = movingPiece;
+        this.board[f.r][f.c] = null;
+        this.turn = this.turn === 'w' ? 'b' : 'w';
+        return legal;
+      }
+    }
+
+    const chess = new ChessEngine();
+
+    /********************************************************************
+     * 2. ESCENA THREE.JS Y MATERIALES GAMER
+     ********************************************************************/
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 11, 11);
+    camera.position.set(0, 10.5, 10.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -248,445 +318,422 @@
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    controls.minDistance = 5;
+    controls.maxDistance = 24;
 
-    // Iluminación Gamer
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
+    // Luces
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.15);
+    sun.position.set(7, 16, 9);
+    sun.castShadow = true;
+    scene.add(sun);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
-    dirLight.position.set(8, 18, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    scene.add(dirLight);
-
-    // Grupos 3D
     const boardGroup = new THREE.Group();
     const piecesGroup = new THREE.Group();
-    const highlightsGroup = new THREE.Group();
-    const grassBlades = []; // Para animar la selva
-    scene.add(boardGroup);
-    scene.add(piecesGroup);
-    scene.add(highlightsGroup);
+    const fxGroup = new THREE.Group();
+    const grassBlades = [];
+    const tileMeshes = {}; // Mapa rápido casilla -> Mesh
+    scene.add(boardGroup, piecesGroup, fxGroup);
 
-    // Materiales personalizables para las fichas
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.2 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.25, metalness: 0.35 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3, metalness: 0.3 });
 
-    // Coordenadas de tablero a mundo 3D
-    function algebraicToWorld(square) {
-      const file = square.charCodeAt(0) - 97; // 'a' -> 0
-      const rank = 8 - parseInt(square[1], 10); // '8' -> 0
-      return { x: file - 3.5, z: rank - 3.5, file, rank };
+    function sqToWorld(sq) {
+      const c = sq.charCodeAt(0) - 97;
+      const r = 8 - parseInt(sq[1], 10);
+      return { x: c - 3.5, z: r - 3.5 };
     }
 
-    function worldToAlgebraic(file, rank) {
-      return String.fromCharCode(97 + file) + (8 - rank);
-    }
-
-    /**************************************************************
-     * 3. CONSTRUCCIÓN DE TABLEROS (CLÁSICO VS SELVA ANIMADA)
-     **************************************************************/
-    function buildBoard(biome = 'classic') {
+    /********************************************************************
+     * 3. TABLERO 3D (CLÁSICO Y BIOMA SELVA ROJA/BLANCA)
+     ********************************************************************/
+    function buildBoard() {
+      const biome = document.getElementById('board-biome').value;
       while (boardGroup.children.length > 0) boardGroup.remove(boardGroup.children[0]);
       grassBlades.length = 0;
 
-      // Marco base del tablero
-      const frameGeo = new THREE.BoxGeometry(9, 0.4, 9);
-      const frameMat = new THREE.MeshStandardMaterial({
-        color: biome === 'jungle' ? 0x2d4c1e : 0x111827,
-        roughness: 0.6
-      });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.y = -0.25;
-      frame.receiveShadow = true;
-      boardGroup.add(frame);
+      // Borde del tablero
+      const border = new THREE.Mesh(
+        new THREE.BoxGeometry(8.8, 0.35, 8.8),
+        new THREE.MeshStandardMaterial({ color: biome === 'jungle' ? 0x14532d : 0x1e293b, roughness: 0.7 })
+      );
+      border.position.y = -0.22;
+      border.receiveShadow = true;
+      boardGroup.add(border);
 
       for (let r = 0; r < 8; r++) {
-        for (let f = 0; f < 8; f++) {
-          const isLight = (r + f) % 2 === 0;
-          const squareName = worldToAlgebraic(f, r);
-          let tileColor = isLight ? 0xe2e8f0 : 0x334155;
-          if (biome === 'jungle') {
-            // Pasto blanco lunar vs Pasto rojo carmesí como pediste
-            tileColor = isLight ? 0xfafafa : 0xb91c1c;
-          }
+        for (let c = 0; c < 8; c++) {
+          const isLight = (r + c) % 2 === 0;
+          const sq = chess.rcToSq(r, c);
+          let baseColor = isLight ? 0xe2e8f0 : 0x334155;
+          if (biome === 'jungle') baseColor = isLight ? 0xf8fafc : 0x991b1b;
 
-          const tileGeo = new THREE.BoxGeometry(1, 0.15, 1);
           const tileMat = new THREE.MeshStandardMaterial({
-            color: tileColor,
-            roughness: biome === 'jungle' ? 0.85 : 0.2,
-            metalness: biome === 'jungle' ? 0.05 : 0.2
+            color: baseColor,
+            roughness: biome === 'jungle' ? 0.8 : 0.25,
+            metalness: 0.1
           });
-          const tile = new THREE.Mesh(tileGeo, tileMat);
-          tile.position.set(f - 3.5, 0, r - 3.5);
+          const tile = new THREE.Mesh(new THREE.BoxGeometry(1, 0.16, 1), tileMat);
+          tile.position.set(c - 3.5, 0, r - 3.5);
           tile.receiveShadow = true;
-          tile.userData = { square: squareName, isTile: true };
+          tile.userData = { square: sq, baseColor };
           boardGroup.add(tile);
+          tileMeshes[sq] = tile;
 
-          // Si es modo selva, agregamos briznas de pasto 3D animadas
+          // Pasto animado en Bioma Selva (Con raycast desactivado para NO bloquear clics)
           if (biome === 'jungle') {
-            const bladeGeo = new THREE.ConeGeometry(0.06, 0.28, 4);
-            const bladeMat = new THREE.MeshStandardMaterial({ color: tileColor });
+            const bladeGeo = new THREE.ConeGeometry(0.05, 0.26, 4);
+            const bladeMat = new THREE.MeshStandardMaterial({ color: baseColor });
             for (let i = 0; i < 4; i++) {
               const blade = new THREE.Mesh(bladeGeo, bladeMat);
-              blade.position.set(
-                (f - 3.5) + (Math.random() - 0.5) * 0.7,
-                0.18,
-                (r - 3.5) + (Math.random() - 0.5) * 0.7
-              );
+              blade.position.set((c - 3.5) + (Math.random() - 0.5) * 0.7, 0.18, (r - 3.5) + (Math.random() - 0.5) * 0.7);
               blade.userData = { phase: Math.random() * Math.PI * 2 };
+              blade.raycast = () => {}; // IMPORTANTE: No interceptar el toque del dedo
               boardGroup.add(blade);
               grassBlades.push(blade);
             }
           }
         }
       }
+      highlightSquares(selectedSquare);
     }
 
-    /**************************************************************
-     * 4. GENERADOR DE PIEZAS 3D (CLÁSICAS Y ESTILO MAGOS/HARRY POTTER)
-     * Nota: También preparado para cargar .GLB de tu repo Ecoajedres-AR
-     **************************************************************/
-    function createPieceMesh(type, color, style = 'classic') {
+    /********************************************************************
+     * 4. MODELOS 3D DE LAS FICHAS (MAGOS HARRY POTTER Y CLÁSICO)
+     ********************************************************************/
+    function createPiece3D(type, color, square) {
+      const style = document.getElementById('piece-style').value;
       const group = new THREE.Group();
       const mat = color === 'w' ? whiteMat : blackMat;
 
-      // Base común de toda ficha
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.15, 20), mat);
-      base.position.y = 0.08;
+      // Pedestal
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.4, 0.14, 20), mat);
+      base.position.y = 0.07;
       base.castShadow = true;
       group.add(base);
 
       if (style === 'wizard') {
-        // Modo Mágico (Personajes con túnica, sombrero/corona y arma mágica)
-        const robe = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.75, 12), mat);
-        robe.position.y = 0.45;
+        const robe = new THREE.Mesh(new THREE.ConeGeometry(0.31, 0.72, 14), mat);
+        robe.position.y = 0.44;
         robe.castShadow = true;
         group.add(robe);
 
         const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), mat);
-        head.position.y = 0.9;
+        head.position.y = 0.88;
         group.add(head);
 
-        // Aura mágica flotante según rango de la pieza
-        const auraColor = color === 'w' ? 0x38bdf8 : 0xf43f5e;
-        const staffMat = new THREE.MeshStandardMaterial({ color: auraColor, emissive: auraColor, emissiveIntensity: 0.6 });
+        const magicColor = color === 'w' ? 0x38bdf8 : 0xfbbf24;
+        const glowMat = new THREE.MeshStandardMaterial({ color: magicColor, emissive: magicColor, emissiveIntensity: 0.7 });
 
         if (type === 'k' || type === 'q') {
-          const crown = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.35, 6), staffMat);
-          crown.position.y = 1.15;
+          const crown = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.34, 6), glowMat);
+          crown.position.y = 1.12;
           group.add(crown);
         } else if (type === 'b') {
-          // Sombrero de hechicero
-          const hat = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.45, 12), staffMat);
-          hat.position.y = 1.15;
+          const hat = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.42, 12), glowMat);
+          hat.position.y = 1.12;
           group.add(hat);
         } else if (type === 'n') {
-          // Lanza de caballero mágico
-          const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1), staffMat);
-          lance.position.set(0.25, 0.65, 0);
-          group.add(lance);
+          const spear = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.05), glowMat);
+          spear.position.set(0.24, 0.6, 0.1);
+          group.add(spear);
         } else if (type === 'r') {
-          // Escudo Golem
-          const shield = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.12), staffMat);
-          shield.position.set(0, 0.55, 0.25);
+          const shield = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.55, 0.1), glowMat);
+          shield.position.set(0, 0.5, 0.24);
           group.add(shield);
         } else {
-          // Espada de guardián para peones
-          const sword = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.55, 0.08), staffMat);
-          sword.position.set(0.22, 0.55, 0.15);
+          const sword = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.08), glowMat);
+          sword.position.set(0.22, 0.52, 0.15);
           group.add(sword);
         }
       } else {
-        // Modo Clásico Staunton 3D
-        const bodyH = { p: 0.45, r: 0.6, n: 0.65, b: 0.75, q: 0.9, k: 1.05 }[type];
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, bodyH, 20), mat);
-        body.position.y = 0.15 + bodyH / 2;
+        const hMap = { p: 0.42, r: 0.58, n: 0.64, b: 0.72, q: 0.88, k: 1.02 };
+        const h = hMap[type];
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, h, 20), mat);
+        body.position.y = 0.14 + h / 2;
         body.castShadow = true;
         group.add(body);
 
-        if (type === 'p') {
-          const top = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), mat);
-          top.position.y = 0.15 + bodyH + 0.12;
-          group.add(top);
-        } else if (type === 'r') {
-          const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.22, 8), mat);
-          tower.position.y = 0.15 + bodyH + 0.1;
-          group.add(tower);
-        } else if (type === 'n') {
-          const snout = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.42), mat);
-          snout.position.set(0, 0.15 + bodyH + 0.1, 0.08);
-          group.add(snout);
-        } else if (type === 'b') {
-          const mitre = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.38, 16), mat);
-          mitre.position.y = 0.15 + bodyH + 0.18;
-          group.add(mitre);
-        } else if (type === 'q') {
-          const orb = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), mat);
-          orb.position.y = 0.15 + bodyH + 0.15;
-          group.add(orb);
-        } else if (type === 'k') {
-          const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.08), mat);
-          const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.08), mat);
-          crossV.position.y = 0.15 + bodyH + 0.22;
-          crossH.position.y = 0.15 + bodyH + 0.22;
-          group.add(crossV, crossH);
-        }
+        const top = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), mat);
+        top.position.y = 0.14 + h + 0.12;
+        group.add(top);
       }
 
+      // Asignar la casilla a todos los sub-objetos para que el Raycaster siempre la detecte
+      group.userData = { square };
+      group.traverse(child => { child.userData = { square }; });
       return group;
     }
 
-    function renderPieces() {
+    function syncPiecesWithBoard() {
       while (piecesGroup.children.length > 0) piecesGroup.remove(piecesGroup.children[0]);
-      const style = document.getElementById('piece-style').value;
-      const board = game.board();
-
       for (let r = 0; r < 8; r++) {
-        for (let f = 0; f < 8; f++) {
-          const piece = board[r][f];
-          if (piece) {
-            const square = worldToAlgebraic(f, r);
-            const pos = algebraicToWorld(square);
-            const mesh = createPieceMesh(piece.type, piece.color, style);
+        for (let c = 0; c < 8; c++) {
+          const p = chess.board[r][c];
+          if (p) {
+            const sq = chess.rcToSq(r, c);
+            const pos = sqToWorld(sq);
+            const mesh = createPiece3D(p.t, p.c, sq);
             mesh.position.set(pos.x, 0.08, pos.z);
-            mesh.userData = { square, piece };
             piecesGroup.add(mesh);
           }
         }
       }
-      updateHUDStatus();
+      updateStatusText();
     }
 
-    /**************************************************************
-     * 5. INTERACCIÓN TÁCTIL / DEDO (RAYCASTER) + TECLADO + IA
-     **************************************************************/
+    // Efecto de partículas mágicas al capturar una pieza
+    function spawnExplosion(x, z) {
+      const geo = new THREE.SphereGeometry(0.07, 8, 8);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+      for (let i = 0; i < 14; i++) {
+        const p = new THREE.Mesh(geo, mat);
+        p.position.set(x, 0.4, z);
+        p.userData = {
+          vx: (Math.random() - 0.5) * 0.16,
+          vy: Math.random() * 0.15 + 0.05,
+          vz: (Math.random() - 0.5) * 0.16,
+          life: 28
+        };
+        fxGroup.add(p);
+      }
+    }
+
+    /********************************************************************
+     * 5. CONTROL TÁCTIL / MOUSE PRECISO (SIN BLOQUEO DE ORBITCONTROLS)
+     ********************************************************************/
     let selectedSquare = null;
+    let legalTargets = [];
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    let downPos = { x: 0, y: 0 };
 
-    function clearHighlights() {
-      while (highlightsGroup.children.length > 0) highlightsGroup.remove(highlightsGroup.children[0]);
-    }
+    function highlightSquares(sq) {
+      // Restaurar color original de todas las casillas
+      Object.values(tileMeshes).forEach(tile => {
+        tile.material.color.setHex(tile.userData.baseColor);
+        tile.material.emissive.setHex(0x000000);
+      });
 
-    function showLegalMoves(square) {
-      clearHighlights();
-      const moves = game.moves({ square, verbose: true });
-      moves.forEach(m => {
-        const pos = algebraicToWorld(m.to);
-        const ringGeo = new THREE.RingGeometry(0.25, 0.42, 24);
-        ringGeo.rotateX(-Math.PI / 2);
-        const ringMat = new THREE.MeshBasicMaterial({
-          color: m.captured ? 0xef4444 : 0x10b981,
-          side: THREE.DoubleSide
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.set(pos.x, 0.09, pos.z);
-        highlightsGroup.add(ring);
+      if (!sq) {
+        legalTargets = [];
+        return;
+      }
+
+      // Iluminar casilla seleccionada en Azul Cian Gamer
+      if (tileMeshes[sq]) {
+        tileMeshes[sq].material.emissive.setHex(0x0284c7);
+      }
+
+      // Iluminar movimientos posibles (Verde = libre, Rojo = ataque)
+      legalTargets = chess.getMovesForSquare(sq);
+      legalTargets.forEach(m => {
+        const t = tileMeshes[m.to];
+        if (t) {
+          t.material.color.setHex(m.captured ? 0xef4444 : 0x10b981);
+          t.material.emissive.setHex(m.captured ? 0x7f1d1d : 0x065f46);
+        }
       });
     }
 
-    function tryMove(from, to) {
-      const move = game.move({ from, to, promotion: 'q' });
-      if (move) {
-        selectedSquare = null;
-        clearHighlights();
-        renderPieces();
+    function executeMove(fromSq, toSq) {
+      const result = chess.move(fromSq, toSq);
+      if (!result) return false;
 
-        // Si está en modo contra la Computadora (IA) y es turno de negras
-        if (!game.game_over() && document.getElementById('game-mode').value === 'ai' && game.turn() === 'b') {
-          setTimeout(makeAIMove, 450);
-        }
-        return true;
+      if (result.captured) {
+        const pos = sqToWorld(toSq);
+        spawnExplosion(pos.x, pos.z);
       }
-      return false;
+
+      selectedSquare = null;
+      highlightSquares(null);
+      syncPiecesWithBoard();
+
+      // Si es contra la IA y le toca a las Negras
+      if (!chess.winner && document.getElementById('game-mode').value === 'ai' && chess.turn === 'b') {
+        setTimeout(playAITurn, 450);
+      }
+      return true;
     }
 
-    // IA con Evaluación Posicional y Niveles (Principiante a Gran Maestro)
-    function makeAIMove() {
-      const rankLevel = parseInt(document.getElementById('ai-rank').value, 10);
-      const legalMoves = game.moves({ verbose: true });
-      if (legalMoves.length === 0) return;
+    // IA con 5 niveles de dificultad (Principiante a Gran Maestro)
+    function playAITurn() {
+      const rank = parseInt(document.getElementById('ai-rank').value, 10);
+      const moves = chess.getAllMoves();
+      if (moves.length === 0) return;
 
-      const pieceValues = { p: 10, n: 30, b: 32, r: 50, q: 90, k: 900 };
-      let chosenMove = legalMoves[0];
+      const valMap = { p: 10, n: 30, b: 32, r: 50, q: 90, k: 900 };
+      let chosen = moves[0];
 
-      if (rankLevel === 1) {
-        // Principiante: Movimiento semialeatorio
-        chosenMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+      if (rank === 1) {
+        chosen = moves[Math.floor(Math.random() * moves.length)];
       } else {
-        // Niveles Superiores: Búsqueda Minimax / Heurística de captura y control central
         let bestScore = -99999;
-        legalMoves.forEach(m => {
-          game.move(m);
+        moves.forEach(m => {
           let score = 0;
-          if (m.captured) score += pieceValues[m.captured] * 10;
-          if (['d4', 'd5', 'e4', 'e5'].includes(m.to)) score += 15;
-          if (game.in_check()) score += 25;
-
-          // Mirar respuesta del oponente según nivel FIDE
-          if (rankLevel >= 3) {
-            const oppMoves = game.moves({ verbose: true });
-            let maxOppCapture = 0;
-            oppMoves.forEach(om => {
-              if (om.captured) maxOppCapture = Math.max(maxOppCapture, pieceValues[om.captured] * 10);
-            });
-            score -= maxOppCapture;
-          }
-          // Ruido controlado según ELO
-          score += (Math.random() - 0.5) * (25 / rankLevel);
-          game.undo();
-
+          if (m.captured) score += (valMap[m.captured] || 10) * 10;
+          if (['d4','d5','e4','e5'].includes(m.to)) score += 14;
+          score += (Math.random() - 0.5) * (30 / rank);
           if (score > bestScore) {
             bestScore = score;
-            chosenMove = m;
+            chosen = m;
           }
         });
       }
-
-      game.move(chosenMove);
-      renderPieces();
+      executeMove(chosen.from, chosen.to);
     }
 
-    // Selección con el dedo o ratón en la cámara 3D/AR
-    window.addEventListener('pointerdown', (e) => {
-      if (e.target.tagName !== 'CANVAS') return;
+    // Detectar toque limpio vs arrastrar cámara
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos = { x: e.clientX, y: e.clientY };
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+      if (dist > 12) return; // Fue un giro de cámara, no un toque de selección
+
+      // Si es turno de la IA, esperar
+      if (document.getElementById('game-mode').value === 'ai' && chess.turn === 'b') return;
+
       pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
 
-      // Verificar clic en piezas o casillas
-      const intersects = raycaster.intersectObjects([...piecesGroup.children, ...boardGroup.children], true);
-      if (intersects.length > 0) {
-        let obj = intersects[0].object;
-        while (obj.parent && !obj.userData.square) obj = obj.parent;
-        const clickedSquare = obj.userData.square;
-        if (!clickedSquare) return;
-
-        if (selectedSquare) {
-          if (!tryMove(selectedSquare, clickedSquare)) {
-            // Si tocó otra pieza propia, cambiar selección
-            const p = game.get(clickedSquare);
-            if (p && p.color === game.turn()) {
-              selectedSquare = clickedSquare;
-              showLegalMoves(clickedSquare);
-            } else {
-              selectedSquare = null;
-              clearHighlights();
-            }
-          }
-        } else {
-          const p = game.get(clickedSquare);
-          if (p && p.color === game.turn()) {
-            selectedSquare = clickedSquare;
-            showLegalMoves(clickedSquare);
-          }
+      const hits = raycaster.intersectObjects([...piecesGroup.children, ...boardGroup.children], true);
+      let clickedSq = null;
+      for (const h of hits) {
+        if (h.object.userData && h.object.userData.square) {
+          clickedSq = h.object.userData.square;
+          break;
         }
+      }
+      if (!clickedSq) return;
+
+      // Si ya teníamos una pieza seleccionada, intentar moverla a la casilla tocada
+      if (selectedSquare) {
+        if (executeMove(selectedSquare, clickedSq)) return;
+      }
+
+      // Si tocó una pieza del turno actual, seleccionarla y mostrar jugadas
+      const piece = chess.getPiece(clickedSq);
+      if (piece && piece.c === chess.turn) {
+        selectedSquare = clickedSq;
+        highlightSquares(clickedSq);
+      } else {
+        selectedSquare = null;
+        highlightSquares(null);
       }
     });
 
-    // Movimiento por teclado (ej: "e2e4" o "Nf3")
-    function handleKeyboardInput() {
+    // Jugar con el teclado (ej. e2e4)
+    function runKeyboardMove() {
       const input = document.getElementById('keyboard-move');
-      const val = input.value.trim();
-      if (!val) return;
-
-      let moved = false;
-      if (val.length === 4) {
-        moved = tryMove(val.slice(0, 2).toLowerCase(), val.slice(2, 4).toLowerCase());
-      }
-      if (!moved) {
-        // Intentar notación algebraica estándar (ej. Nf3, e4)
-        const m = game.move(val);
-        if (m) {
-          renderPieces();
-          if (!game.game_over() && document.getElementById('game-mode').value === 'ai' && game.turn() === 'b') {
-            setTimeout(makeAIMove, 450);
-          }
-          moved = true;
+      const txt = input.value.trim().toLowerCase().replace(/[^a-h1-8]/g, '');
+      if (txt.length === 4) {
+        if (executeMove(txt.slice(0, 2), txt.slice(2, 4))) {
+          input.value = '';
         }
       }
-      if (moved) input.value = '';
     }
-
-    document.getElementById('btn-move-key').addEventListener('click', handleKeyboardInput);
+    document.getElementById('btn-move-key').addEventListener('click', runKeyboardMove);
     document.getElementById('keyboard-move').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleKeyboardInput();
+      if (e.key === 'Enter') runKeyboardMove();
     });
 
-    /**************************************************************
-     * 6. CONTROLES DE INTERFAZ Y CÁMARA AR
-     **************************************************************/
-    function updateHUDStatus() {
-      const t = I18N[currentLang];
-      let text = game.turn() === 'w' ? t.turnW : t.turnB;
-      if (game.in_checkmate()) text = t.checkmate;
-      else if (game.in_draw()) text = t.draw;
-      else if (game.in_check()) text += t.check;
-      document.getElementById('ui-status').textContent = text;
+    /********************************************************************
+     * 6. IDIOMAS (ES, EN, CHINO MANDARÍN) Y EVENTOS DE UI
+     ********************************************************************/
+    const LANG = {
+      es: {
+        w: "🟢 Turno: BLANCAS (Toca una ficha blanca)",
+        b: "🔴 Turno: NEGRAS",
+        winW: "🏆 ¡VICTORIA DE LAS BLANCAS!",
+        winB: "🏆 ¡VICTORIA DE LAS NEGRAS!",
+        help: "💡 <b>Cómo jugar:</b> Toca una ficha tuya y luego toca una casilla iluminada en verde/rojo."
+      },
+      en: {
+        w: "🟢 Turn: WHITE (Tap a white piece)",
+        b: "🔴 Turn: BLACK",
+        winW: "🏆 WHITE WINS!",
+        winB: "🏆 BLACK WINS!",
+        help: "💡 <b>How to play:</b> Tap your piece, then tap a green/red highlighted square."
+      },
+      zh: {
+        w: "🟢 回合：白方 (点击白棋)",
+        b: "🔴 回合：黑方",
+        winW: "🏆 白方获胜！",
+        winB: "🏆 黑方获胜！",
+        help: "💡 <b>玩法：</b> 点击您的棋子，然后点击绿色或红色高亮格子移动。"
+      }
+    };
+
+    function updateStatusText() {
+      const l = LANG[document.getElementById('lang-select').value];
+      const badge = document.getElementById('ui-status');
+      if (chess.winner === 'w') badge.textContent = l.winW;
+      else if (chess.winner === 'b') badge.textContent = l.winB;
+      else badge.textContent = chess.turn === 'w' ? l.w : l.b;
+      document.getElementById('ui-help').innerHTML = l.help;
     }
 
-    document.getElementById('lang-select').addEventListener('change', (e) => {
-      currentLang = e.target.value;
-      const t = I18N[currentLang];
-      document.getElementById('ui-title').textContent = t.title;
-      document.getElementById('lbl-mode').textContent = t.mode;
-      document.getElementById('lbl-rank').textContent = t.rank;
-      document.getElementById('lbl-biome').textContent = t.biome;
-      document.getElementById('lbl-style').textContent = t.style;
-      document.getElementById('lbl-colors').textContent = t.colors;
-      document.getElementById('btn-reset').textContent = t.reset;
-      document.getElementById('btn-toggle-ar').textContent = t.arBtn;
-      document.getElementById('keyboard-move').placeholder = t.keyPlaceholder;
-      document.getElementById('btn-move-key').textContent = t.moveBtn;
-      updateHUDStatus();
-    });
-
-    document.getElementById('board-biome').addEventListener('change', (e) => buildBoard(e.target.value));
-    document.getElementById('piece-style').addEventListener('change', () => renderPieces());
+    document.getElementById('lang-select').addEventListener('change', updateStatusText);
+    document.getElementById('board-biome').addEventListener('change', buildBoard);
+    document.getElementById('piece-style').addEventListener('change', syncPiecesWithBoard);
     document.getElementById('color-white').addEventListener('input', (e) => whiteMat.color.set(e.target.value));
     document.getElementById('color-black').addEventListener('input', (e) => blackMat.color.set(e.target.value));
     document.getElementById('btn-reset').addEventListener('click', () => {
-      game.reset();
+      chess.reset();
       selectedSquare = null;
-      clearHighlights();
-      renderPieces();
+      highlightSquares(null);
+      syncPiecesWithBoard();
     });
 
-    // Activar Cámara de Realidad Aumentada en Celular/PC
-    let arActive = false;
+    // Cámara AR
+    let arOn = false;
     document.getElementById('btn-toggle-ar').addEventListener('click', async () => {
       const video = document.getElementById('ar-video');
-      if (!arActive) {
+      if (!arOn) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }, audio: false
-          });
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
           video.srcObject = stream;
           video.style.display = 'block';
           document.body.style.background = 'transparent';
-          arActive = true;
+          arOn = true;
         } catch (err) {
-          alert('No se pudo acceder a la cámara AR. Verifica permisos HTTPS o navegador.');
+          alert('Para activar la cámara AR abre el enlace desde HTTPS (ej. GitHub Pages) y acepta el permiso de cámara.');
         }
       } else {
-        if (video.srcObject) video.srcObject.getTracks().forEach(tr => tr.stop());
+        if (video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
         video.style.display = 'none';
         document.body.style.background = '#090d16';
-        arActive = false;
+        arOn = false;
       }
     });
 
-    // Bucle de Animación (incluye viento en el pasto si está en Bioma Selva)
+    // Bucle de Animación Principal
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
-      const elapsed = clock.getElapsedTime();
+      const t = clock.getElapsedTime();
+
+      // Animar pasto en Bioma Selva
       grassBlades.forEach(b => {
-        b.rotation.z = Math.sin(elapsed * 2.5 + b.userData.phase) * 0.18;
+        b.rotation.z = Math.sin(t * 2.5 + b.userData.phase) * 0.2;
       });
+
+      // Animar explosiones de captura
+      for (let i = fxGroup.children.length - 1; i >= 0; i--) {
+        const p = fxGroup.children[i];
+        p.position.x += p.userData.vx;
+        p.position.y += p.userData.vy;
+        p.position.z += p.userData.vz;
+        p.userData.vy -= 0.008;
+        p.userData.life--;
+        if (p.userData.life <= 0) fxGroup.remove(p);
+      }
+
       controls.update();
       renderer.render(scene, camera);
     }
@@ -697,15 +744,12 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Inicializar
-    buildBoard('classic');
-    renderPieces();
+    // Iniciar Juego
+    buildBoard();
+    syncPiecesWithBoard();
     animate();
   </script>
 </body>
 </html>
-
-
-
 
 
