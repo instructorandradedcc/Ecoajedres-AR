@@ -1,806 +1,709 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Duelo de Magos: Ajedrez</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <style>
-        /* Estilos generales */
-        html { overflow-y: auto; } /* Habilitar scroll globalmente */
-        body { 
-            overscroll-behavior: none; 
-            overflow-y: auto; /* Asegurar scroll en el body */
-        }
-        html.ar-active, body.ar-active { overflow: hidden; width: 100%; height: 100%; margin: 0; padding: 0; }
-        .screen { 
-            display: none; 
-            width: 100%; 
-            min-height: 100vh; 
-            transition: opacity 0.5s ease-in-out; 
-            padding-bottom: 8rem; 
-            box-sizing: border-box; /* Asegurar que el padding no cause overflow */
-        }
-        .screen.active { display: flex; }
-        .selection-card, .board-card, .color-swatch, .mode-card { transition: all 0.3s ease; border: 4px solid transparent; }
-        .selection-card.selected, .board-card.selected, .color-swatch.selected, .mode-card.selected { border-color: #FBBF24; transform: scale(1.05); }
-        #ar-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; }
-        .version { position: fixed; bottom: 10px; right: 10px; color: #9ca3af; font-size: 0.8rem; z-index: 100; }
-        .game-status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 20px; z-index: 100; font-size: 1.2rem; display: none; }
-        #ar-instructions-ui { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9991; display: flex; justify-content: center; align-items: center; pointer-events: none; background-color: rgba(0,0,0,0.7); color: white; padding: 20px; border-radius: 15px; text-align: center; font-size: 1.2rem; transition: opacity 0.3s; }
-        #ar-instructions-ui.hidden { opacity: 0; pointer-events: none; }
-        
-        /* --- ESTILOS MEJORADOS PARA LA PANTALLA DE CARGA INICIAL --- */
-        #initial-loading-screen {
-            background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://image.cdn2.seaart.me/2023-11-11/22394598133357573/9a3b16c0f9915a5843f012fcb837415822d7da03_high.webp');
-            background-size: cover;
-            background-position: center;
-            overflow: hidden; 
-            filter: brightness(0.8) contrast(1.2); /* Ajuste de brillo y contraste para el nuevo fondo */
-        }
-        #loading-content { z-index: 2; filter: none; } /* Asegurar que el contenido no herede el filtro */
-        #piece-loader { position: relative; width: 90px; height: 90px; }
-        #piece-loader svg { width: 100%; height: 100%; fill: #fde047; filter: drop-shadow(0 0 10px #facc15); position: absolute; top: 0; left: 0; opacity: 0; transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out; transform: scale(0.8); }
-        #piece-loader svg.active { opacity: 1; transform: scale(1); }
-        .magic-progress-container { width: 100%; background-color: #4a2a15; border-radius: 20px; border: 3px solid #6b4629; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); padding: 4px; }
-        .loading-progress-bar { background: linear-gradient(90deg, #facc15 0%, #fde047 100%); box-shadow: 0 0 8px #facc15, 0 0 15px #fde047; border-radius: 12px; position: relative; transition: width 0.4s cubic-bezier(0.65, 0, 0.35, 1); }
-        .loading-progress-bar::after { 
-            content: ''; 
-            position: absolute; right: -8px; top: 50%; 
-            transform: translateY(-50%); 
-            width: 20px; height: 20px; 
-            background: white; border-radius: 50%; 
-            opacity: 1; transition: opacity 0.3s;
-            animation: pulse-glow 1.5s infinite ease-in-out;
-        }
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; }
-            50% { box-shadow: 0 0 15px 7px white, 0 0 30px 12px #fde047; }
-            100% { box-shadow: 0 0 10px 4px white, 0 0 20px 8px #fde047; }
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>EcoAjedrez 3D & AR - Gamer Prototype</title>
+  <style>
+    :root {
+      --bg-panel: rgba(15, 23, 42, 0.85);
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.4);
+      --text: #f8fafc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: var(--text); }
+    
+    /* Video de fondo para modo AR Fallback */
+    #ar-video {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 1; display: none;
+    }
+    #canvas-container {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+    }
 
-        /* Partículas Mágicas */
-        .particle-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
-        .particle { position: absolute; background: #fde047; border-radius: 50%; opacity: 0; animation: rise 10s infinite linear; box-shadow: 0 0 5px #fde047, 0 0 10px #facc15; }
-        @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; } }
-        
-        .a-enter-vr-button { 
-            position: fixed !important; bottom: 20px !important; left: 50% !important; 
-            transform: translateX(-50%) !important; background-color: #10B991 !important; 
-            color: white !important; border: none !important; border-radius: 9999px !important; 
-            padding: 0.75rem 2.5rem !important; font-weight: bold !important; font-size: 1.125rem !important; 
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important; 
-            z-index: 9999; /* Asegurar que el botón esté por encima de todo */
-        }
+    /* HUD Gamer Superior */
+    .hud-top {
+      position: fixed; top: 12px; left: 12px; right: 12px; z-index: 10;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      pointer-events: none;
+    }
+    .hud-card {
+      background: var(--bg-panel); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+      padding: 10px 16px; pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .title-gamer {
+      font-weight: 800; font-size: 1.1rem; letter-spacing: 1px;
+      background: linear-gradient(90deg, #34d399, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .status-badge {
+      font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;
+    }
 
-        /* Animaciones para la pantalla de carga AR (efecto "Doctor Strange") - MEJORADO */
-        #ar-entry-loading-screen {
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://i.pinimg.com/736x/ec/16/eb/ec16ebb634adab20192282b8a43a797d.jpg');
-            background-size: cover;
-            background-position: center;
-            filter: brightness(0.6) sepia(0.3); /* Oscurecer y dar un tono místico a la imagen de fondo */
-            overflow: hidden;
-            position: relative;
-        }
+    /* Panel Lateral de Configuración */
+    .hud-sidebar {
+      position: fixed; top: 90px; left: 12px; z-index: 10;
+      width: 270px; max-height: calc(100vh - 180px); overflow-y: auto;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+    .control-group label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
+    select, input[type="text"], button {
+      background: rgba(30, 41, 59, 0.9); color: #fff;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+      padding: 8px 10px; font-size: 0.85rem; outline: none; transition: 0.2s;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none; font-weight: 700; cursor: pointer; text-align: center;
+    }
+    .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-ar {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      border: none; font-weight: 700; cursor: pointer;
+    }
+    .color-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+    input[type="color"] {
+      width: 48%; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;
+    }
 
-        #ar-entry-loading-screen .w-full { 
-            filter: none; /* Asegurar que los elementos de carga no hereden el filtro */
-            position: relative;
-            z-index: 10;
-        }
+    /* Barra Inferior de Comando por Teclado */
+    .hud-bottom {
+      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      z-index: 10; display: flex; gap: 8px; align-items: center;
+      width: min(95%, 500px);
+    }
+    .hud-bottom input { flex: 1; }
 
-        #ar-loading-visual {
-            position: relative;
-            width: 180px; /* Tamaño base del portal */
-            height: 180px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
+    @media (max-width: 640px) {
+      .hud-sidebar { width: 210px; font-size: 0.8rem; }
+    }
+  </style>
 
-        .portal-ring {
-            position: absolute;
-            border: 5px solid transparent;
-            border-radius: 50%;
-            filter: drop-shadow(0 0 10px #facc15) drop-shadow(0 0 25px #fde047);
-        }
-
-        .portal-ring-1 {
-            width: 180px; height: 180px;
-            border-top-color: #fde047;
-            border-right-color: #facc15;
-            animation: portal-spin 8s linear infinite, portal-pulse 2s ease-in-out infinite;
-        }
-
-        .portal-ring-2 {
-            width: 150px; height: 150px;
-            border-bottom-color: #fde047;
-            border-left-color: #facc15;
-            animation: portal-spin-reverse 10s linear infinite, portal-pulse 2.2s ease-in-out infinite;
-            animation-delay: -0.5s;
-        }
-
-        .portal-ring-3 {
-            width: 120px; height: 120px;
-            border-top-color: #facc15;
-            border-left-color: #fde047;
-            animation: portal-spin 12s linear infinite, portal-pulse 2.5s ease-in-out infinite;
-            animation-delay: -1s;
-        }
-        
-        .floating-king-icon {
-            position: relative; 
-            z-index: 10;
-            animation: float-and-rotate 3s ease-in-out infinite, magic-glow 2s infinite alternate;
-            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8));
-        }
-
-        @keyframes portal-spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes portal-spin-reverse {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(-360deg); }
-        }
-
-        @keyframes portal-pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.9; }
-        }
-
-        @keyframes float-and-rotate {
-            0% { transform: translateY(0) rotateY(0deg); }
-            50% { transform: translateY(-10px) rotateY(10deg); }
-            100% { transform: translateY(0) rotateY(0deg); }
-        }
-        @keyframes magic-glow {
-            0% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8)); }
-            50% { filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 25px rgba(253, 224, 71, 1)); }
-            100% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7)) drop-shadow(0 0 20px rgba(253, 224, 71, 0.8)); }
-        }
-    </style>
+  <!-- Librería de Reglas Oficiales de Ajedrez (Chess.js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <!-- Three.js + Controles + GLTFLoader para cargar tus modelos de Ecoajedres-AR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
-<body class="bg-stone-900 text-white">
-    <div id="app-version" class="version"></div>
-    <div id="game-status" class="game-status"></div>
+<body>
 
-    <!-- Pantallas de UI -->
-    <div id="welcome-screen" class="screen active flex-col justify-center items-center text-center p-8 bg-cover bg-center relative overflow-hidden" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://i.pinimg.com/originals/47/42/de/4742de0418e35d8c55a2948cd86ec6fa.jpg');">
-        <!-- Texto de fondo decorativo -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-            <h2 class="text-8xl md:text-[10rem] lg:text-[12rem] font-black text-white opacity-10 select-none transform -translate-y-4">Ajedrez Mágico</h2>
-        </div>
+  <!-- Video para Cámara de Realidad Aumentada -->
+  <video id="ar-video" autoplay playsinline muted></video>
+  
+  <!-- Contenedor 3D -->
+  <div id="canvas-container"></div>
 
-        <!-- Contenido principal -->
-        <div class="relative z-10 flex flex-col items-center">
-            <h1 class="text-5xl md:text-7xl font-extrabold mb-4 text-amber-300 drop-shadow-lg">Duelo de Ajedrez Mágico</h1>
-            <p class="text-lg md:text-xl max-w-2xl mb-8 text-stone-200">Invoca un tablero de ajedrez 3D en tu propio entorno.</p>
-            <button id="start-btn" class="bg-amber-400 text-stone-900 font-bold py-3 px-8 rounded-full text-lg shadow-lg hover:bg-amber-300 transition-transform transform hover:scale-105">Empezar Duelo</button>
-        </div>
+  <!-- HUD Superior -->
+  <div class="hud-top">
+    <div class="hud-card">
+      <div class="title-gamer" id="ui-title">ECOAJEDREZ 3D AR</div>
+      <div class="status-badge" id="ui-status">Turno: Blancas | Selecciona una ficha</div>
     </div>
-    
-    <div id="initial-loading-screen" class="screen relative flex-col justify-center items-center text-center p-8">
-        <div id="particle-container" class="particle-container"></div>
-        <div id="loading-content" class="w-full max-w-lg relative z-10">
-            <h2 id="loading-title" class="text-4xl font-bold mb-6 text-amber-300 drop-shadow-lg">Preparando el Campo de Batalla</h2>
-            <div id="piece-loader" class="mb-6 h-24 mx-auto"></div>
-            <p id="loading-text" class="text-center text-stone-300 mt-2 text-lg mb-4">Forjando nuevos artefactos mágicos...</p>
-            <div class="magic-progress-container">
-                <div id="initial-loading-progress-bar" class="loading-progress-bar" style="width: 0%; height: 16px;"></div>
-            </div>
-        </div>
+    <div class="hud-card" style="display:flex; gap:8px; align-items:center;">
+      <select id="lang-select" aria-label="Idioma">
+        <option value="es">🇪🇸 Español</option>
+        <option value="en">🇺🇸 English</option>
+        <option value="zh">🇨🇳 中文 (Mandarín)</option>
+      </select>
+      <button class="btn-ar" id="btn-toggle-ar">📷 Modo AR</button>
     </div>
+  </div>
 
-    <div id="selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Selecciona tu Ejército</h2><p class="text-stone-300">Elige el estilo de piezas para tu partida.</p></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="harry-potter"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧙‍♂️</div><h3 class="text-2xl font-semibold mb-2">Ajedrez Mágico</h3><p class="text-stone-400">Piezas inspiradas en el mundo de los magos.</p></div>
-            <div class="selection-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-set="futuristic"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center"><span class="text-8xl">♜</span></div><h3 class="text-2xl font-semibold mb-2">Vanguardia Futurista</h3><p class="text-stone-400">Diseño moderno y disruptivo.</p></div>
-        </div>
-        <button id="continue-set-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 transition-all shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-    </div>
-    
-    <div id="board-selection-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Personaliza tu Partida</h2><p class="text-stone-300">Elige tu tablero y el color de tus piezas.</p></div>
-        <div class="max-w-4xl w-full">
-            <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige un tablero</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-wood"><img src="https://placehold.co/400x300/854d0e/fefce8?text=Madera+Clásica" class="w-full h-40 object-cover rounded-md mb-3" alt="Tablero de madera clásica"><p>Madera Clásica</p></div>
-                <div class="board-card bg-stone-700 rounded-lg p-4 text-center cursor-pointer" data-board="classic-marble"><img src="https://placehold.co/400x300/d1d5db/1f2937?text=Mármol+Elegante" class="w-full h-40 object-cover rounded-md mb-3" alt="Tablero de mármol elegante"><p>Mármol Elegante</p></div>
-            </div>
-            <h3 class="text-2xl font-semibold mb-4 text-amber-200">Elige el color de tus tropas</h3>
-            <div class="flex justify-center gap-6"><div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-white" data-color="w"></div><div class="color-swatch rounded-full w-16 h-16 cursor-pointer bg-gray-800" data-color="b"></div></div>
-        </div>
-        <button id="continue-board-btn" class="mt-12 bg-amber-500 text-stone-900 font-bold py-3 px-10 rounded-full text-lg hover:bg-amber-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-        <button id="back-to-set-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
+  <!-- Panel de Configuración Gamer -->
+  <div class="hud-sidebar hud-card">
+    <div class="control-group">
+      <label id="lbl-mode">Modo de Juego</label>
+      <select id="game-mode">
+        <option value="ai">🤖 Vs Computadora (IA)</option>
+        <option value="pvp">⚔️ Versus (2 Jugadores)</option>
+      </select>
     </div>
 
-    <div id="game-mode-screen" class="screen flex-col justify-center items-center p-8 bg-stone-800">
-        <div class="text-center mb-10 mt-10"><h2 class="text-4xl font-bold mb-2 text-amber-300">Modo de Duelo</h2><p class="text-stone-300">¿Cómo quieres jugar?</p></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pva"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🤖</div><h3 class="text-2xl font-semibold">Estratega Solitario (vs. Oráculo)</h3></div>
-            <div class="mode-card bg-stone-700 rounded-lg p-6 text-center cursor-pointer" data-mode="pvp"><div class="w-full h-48 bg-stone-600 rounded-md mb-4 flex items-center justify-center text-6xl">🧑‍🤝‍🧑</div><h3 class="text-2xl font-semibold">Duelo de Leyendas (1 vs. 1)</h3></div>
-        </div>
-        <button id="start-game-btn" class="mt-12 bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg disabled:bg-stone-600 disabled:cursor-not-allowed" disabled>Continuar</button>
-        <button id="back-to-board-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
+    <div class="control-group" id="ai-level-group">
+      <label id="lbl-rank">Rango FIDE (Dificultad)</label>
+      <select id="ai-rank">
+        <option value="1">🌱 Principiante (600 ELO)</option>
+        <option value="2" selected>🛡️ Intermedio (1200 ELO)</option>
+        <option value="3">⚔️ Avanzado (1800 ELO)</option>
+        <option value="4">👑 Maestro FIDE (2300 ELO)</option>
+        <option value="5">🔥 Gran Maestro (2800 ELO)</option>
+      </select>
     </div>
 
-    <div id="instructions-screen" class="screen flex-col justify-center items-center text-center p-8 bg-stone-800">
-        <h2 class="text-4xl font-bold mb-4 text-amber-300">Prepara tu Espacio de Juego</h2>
-        <p class="text-stone-300 max-w-xl mb-6">El portal mágico necesita detectar una superficie plana y bien iluminada.</p>
-        <div class="text-6xl mb-4">📱</div>
-        <p class="text-stone-300 max-w-xl mb-8">Cuando aparezca el botón para "INVOCAR", presiónalo. Luego mueve tu cámara lentamente sobre una mesa o el suelo hasta que veas un retículo, y toca la pantalla para materializar el tablero.</p>
-        <button id="start-ar-btn" class="bg-green-500 text-white font-bold py-3 px-10 rounded-full text-lg hover:bg-green-400 shadow-lg">Entrar al Portal</button>
-        <button id="back-to-mode-select-btn" class="mt-4 bg-stone-700 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600">Volver</button>
-    </div>
-    
-    <div id="ar-entry-loading-screen" class="screen flex-col justify-center items-center text-center p-8">
-        <div id="particle-container-ar" class="particle-container"></div>
-        <div class="w-full max-w-lg z-10 flex flex-col items-center">
-            <h2 id="ar-loading-status-title" class="text-4xl font-bold mb-4 text-amber-300">Abriendo Portal...</h2>
-            <div id="ar-loading-visual">
-                <div class="portal-ring portal-ring-1"></div>
-                <div class="portal-ring portal-ring-2"></div>
-                <div class="portal-ring portal-ring-3"></div>
-                <div class="floating-king-icon text-8xl text-amber-300">♔</div>
-            </div>
-            <p id="ar-loading-status-text" class="text-stone-300 max-w-xl mb-6">Alineando el plano astral...</p>
-        </div>
+    <div class="control-group">
+      <label id="lbl-biome">Bioma del Tablero</label>
+      <select id="board-biome">
+        <option value="classic">🏁 Clásico (Blanco y Negro)</option>
+        <option value="jungle">🌿 Selva Mágica (Pasto Rojo/Blanco)</option>
+      </select>
     </div>
 
-
-    <div id="ar-screen" class="screen flex-col justify-center items-center bg-transparent">
-        <div id="ar-container">
-            <!-- La escena AR ahora vive aquí permanentemente, pero oculta al inicio -->
-            <a-scene id="ar-scene" 
-                vr-mode-ui="enabled: false;" 
-                webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #ar-ui-overlay;" 
-                renderer="colorManagement: true; physicallyCorrectLights: true;"
-                ar-logic 
-                loading-screen="enabled: false;"
-                style="display: none;"> 
-                
-                <a-assets id="ar-assets" timeout="10000"></a-assets>
-                
-                <a-camera></a-camera>
-                <a-light type="ambient" color="#FFF" intensity="1.2"></a-light>
-                <a-light type="directional" position="-1 2 1" intensity="1.0"></a-light>
-                <a-entity id="board-container" visible="false"></a-entity>
-                <a-entity id="reticle" geometry="primitive: ring; radiusInner: 0.06; radiusOuter: 0.08;" material="color: #FBBF24; shader: flat;" visible="false"></a-entity>
-            </a-scene>
-        </div>
-        <div id="ar-ui-overlay" class="absolute top-0 left-0 w-full h-full pointer-events-none">
-            <button id="exit-ar-btn" class="absolute top-5 left-5 bg-stone-700/70 text-white font-bold py-2 px-6 rounded-full hover:bg-stone-600 z-30 pointer-events-auto" style="display: none;">Rendirse</button>
-            <div id="ar-instructions-ui" class="hidden">
-                <p id="ar-instructions-text">Mueve tu dispositivo para encontrar una superficie.</p>
-            </div>
-        </div>
+    <div class="control-group">
+      <label id="lbl-style">Estilo de Piezas</label>
+      <select id="piece-style">
+        <option value="classic">♟️ Clásico 3D Torneado</option>
+        <option value="wizard">🧙‍♂️ Magos / Fantasía (Harry Potter)</option>
+      </select>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chess.js@0.12.0/chess.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const APP_VERSION = "3.13.0"; // Versión con Fondo de Carga y Cámara Estable
-            document.getElementById('app-version').textContent = `v${APP_VERSION}`;
 
-            // --- Estado del juego y variables globales ---
-            let game = new Chess();
-            let gameState = 'IDLE';
-            let selectedPieceEntity = null;
-            let legalMoveEntities = [];
-            let playerColor = 'w';
-            let gameMode = 'pva';
-            let selectedSet = null;
-            let selectedBoard = null;
-            let sceneEl = document.getElementById('ar-scene'); // Obtener la escena A-Frame ya en el DOM
-            let boardPlaced = false;
-            let loadingPhrasesInterval = null;
+    <div class="control-group">
+      <label id="lbl-colors">Colores Gamer (Bando 1 / Bando 2)</label>
+      <div class="color-row">
+        <input type="color" id="color-white" value="#f8fafc" title="Color Jugador 1" />
+        <input type="color" id="color-black" value="#1e293b" title="Color Jugador 2" />
+      </div>
+    </div>
 
-            const screens = {
-                welcome: document.getElementById('welcome-screen'),
-                initialLoading: document.getElementById('initial-loading-screen'),
-                selection: document.getElementById('selection-screen'),
-                boardSelection: document.getElementById('board-selection-screen'),
-                gameMode: document.getElementById('game-mode-screen'),
-                instructions: document.getElementById('instructions-screen'),
-                arEntryLoading: document.getElementById('ar-entry-loading-screen'),
-                ar: document.getElementById('ar-screen'),
-            };
-            const buttons = {
-                start: document.getElementById('start-btn'),
-                continueSet: document.getElementById('continue-set-btn'),
-                continueBoard: document.getElementById('continue-board-btn'),
-                startGame: document.getElementById('start-game-btn'),
-                startAR: document.getElementById('start-ar-btn'),
-                backToSet: document.getElementById('back-to-set-btn'),
-                backToBoardSelect: document.getElementById('back-to-board-select-btn'),
-                backToModeSelect: document.getElementById('back-to-mode-select-btn'),
-                exitAR: document.getElementById('exit-ar-btn'),
-            };
+    <button class="btn-primary" id="btn-reset">🔄 Nueva Partida</button>
+  </div>
 
-            const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/instructorandradedcc/Ecoajedres-AR/main/';
-            const assetMap = {
-                'harry-potter': {
-                    w: { p: { url: `${GITHUB_BASE_URL}Pawn_Gryffindor.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02' }, k: { url: `${GITHUB_BASE_URL}King_Dumbledore.glb`, scale: '0.02 0.02 0.02' } },
-                    b: { p: { url: `${GITHUB_BASE_URL}Pawn_Sytherin.glb`, scale: '0.02 0.02 0.02' }, r: { url: `${GITHUB_BASE_URL}Rook_Dobby2.glb`, scale: '0.02 0.02 0.02' }, n: { url: `${GITHUB_BASE_URL}Knight_RWeasley.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, b: { url: `${GITHUB_BASE_URL}Bishop_HPotter_Hollow.glb`, scale: '0.02 0.02 0.02' }, q: { url: `${GITHUB_BASE_URL}Queen_Hermione.glb`, scale: '0.02 0.02 0.02', rotation: '0 180 0' }, k: { url: `${GITHUB_BASE_URL}King_Voldemort.glb`, scale: '0.02 0.02 0.02' } }
-                },
-                'futuristic': { w: { p: { url: ``, scale: '0.1 0.1 0.1' } }, b: { p: { url: ``, scale: '0.1 0.1 0.1' } } }
-            };
+  <!-- HUD Inferior: Entrada por Teclado -->
+  <div class="hud-bottom hud-card">
+    <input type="text" id="keyboard-move" placeholder="Teclado: ej. e2e4 o g1f3 + Enter" />
+    <button class="btn-primary" id="btn-move-key">Mover</button>
+  </div>
 
-            function navigateTo(screenName) {
-                // Desactivar AR mode si salimos de la pantalla AR
-                if (screenName !== 'ar' && sceneEl && sceneEl.is('ar-mode')) {
-                    sceneEl.exitVR();
-                }
+  <script>
+    /**************************************************************
+     * 1. INTERNACIONALIZACIÓN (Español, Inglés, Chino Mandarín)
+     **************************************************************/
+    const I18N = {
+      es: {
+        title: "ECOAJEDREZ 3D AR",
+        turnW: "Turno: Blancas",
+        turnB: "Turno: Negras",
+        check: " ¡JAQUE!",
+        checkmate: "🏆 ¡JAQUE MATE!",
+        draw: "🤝 ¡EMPATE!",
+        mode: "Modo de Juego",
+        rank: "Rango FIDE (Dificultad)",
+        biome: "Bioma del Tablero",
+        style: "Estilo de Piezas",
+        colors: "Colores Gamer (Bando 1 / 2)",
+        reset: "🔄 Nueva Partida",
+        arBtn: "📷 Modo AR",
+        keyPlaceholder: "Teclado: ej. e2e4 o g1f3 + Enter",
+        moveBtn: "Mover"
+      },
+      en: {
+        title: "ECOCHESS 3D AR",
+        turnW: "Turn: White",
+        turnB: "Turn: Black",
+        check: " CHECK!",
+        checkmate: "🏆 CHECKMATE!",
+        draw: "🤝 DRAW!",
+        mode: "Game Mode",
+        rank: "FIDE Rank (Difficulty)",
+        biome: "Board Biome",
+        style: "Piece Style",
+        colors: "Gamer Colors (Side 1 / 2)",
+        reset: "🔄 New Game",
+        arBtn: "📷 AR Mode",
+        keyPlaceholder: "Keyboard: e.g. e2e4 or g1f3 + Enter",
+        moveBtn: "Move"
+      },
+      zh: {
+        title: "生态国际象棋 3D AR",
+        turnW: "回合：白方",
+        turnB: "回合：黑方",
+        check: " 将军！",
+        checkmate: "🏆 将死！比赛结束",
+        draw: "🤝 平局！",
+        mode: "游戏模式",
+        rank: "棋手等级 (难度)",
+        biome: "棋盘生态主题",
+        style: "棋子风格",
+        colors: "自定义颜色 (白 / 黑)",
+        reset: "🔄 重新开始",
+        arBtn: "📷 增强现实 (AR)",
+        keyPlaceholder: "键盘输入: 例如 e2e4 + 回车",
+        moveBtn: "移动"
+      }
+    };
+    let currentLang = 'es';
 
-                Object.values(screens).forEach(s => s.classList.remove('active'));
-                screens[screenName].classList.add('active');
+    /**************************************************************
+     * 2. MOTOR DE REGLAS Y ESCENA THREE.JS
+     **************************************************************/
+    const game = new Chess();
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
 
-                // Ajustar overflow del HTML/BODY para AR o UI normal
-                if (screenName === 'ar' || screenName === 'arEntryLoading') {
-                    document.documentElement.classList.add('ar-active');
-                    document.body.classList.add('ar-active');
-                } else {
-                    document.documentElement.classList.remove('ar-active');
-                    document.body.classList.remove('ar-active');
-                }
-                
-                // Mostrar la escena AR solo cuando sea necesario
-                if (screenName === 'ar') {
-                    sceneEl.style.display = 'block'; 
-                } else {
-                    sceneEl.style.display = 'none'; 
-                }
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 11, 11);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+    // Iluminación Gamer
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    dirLight.position.set(8, 18, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // Grupos 3D
+    const boardGroup = new THREE.Group();
+    const piecesGroup = new THREE.Group();
+    const highlightsGroup = new THREE.Group();
+    const grassBlades = []; // Para animar la selva
+    scene.add(boardGroup);
+    scene.add(piecesGroup);
+    scene.add(highlightsGroup);
+
+    // Materiales personalizables para las fichas
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.2 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.25, metalness: 0.35 });
+
+    // Coordenadas de tablero a mundo 3D
+    function algebraicToWorld(square) {
+      const file = square.charCodeAt(0) - 97; // 'a' -> 0
+      const rank = 8 - parseInt(square[1], 10); // '8' -> 0
+      return { x: file - 3.5, z: rank - 3.5, file, rank };
+    }
+
+    function worldToAlgebraic(file, rank) {
+      return String.fromCharCode(97 + file) + (8 - rank);
+    }
+
+    /**************************************************************
+     * 3. CONSTRUCCIÓN DE TABLEROS (CLÁSICO VS SELVA ANIMADA)
+     **************************************************************/
+    function buildBoard(biome = 'classic') {
+      while (boardGroup.children.length > 0) boardGroup.remove(boardGroup.children[0]);
+      grassBlades.length = 0;
+
+      // Marco base del tablero
+      const frameGeo = new THREE.BoxGeometry(9, 0.4, 9);
+      const frameMat = new THREE.MeshStandardMaterial({
+        color: biome === 'jungle' ? 0x2d4c1e : 0x111827,
+        roughness: 0.6
+      });
+      const frame = new THREE.Mesh(frameGeo, frameMat);
+      frame.position.y = -0.25;
+      frame.receiveShadow = true;
+      boardGroup.add(frame);
+
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const isLight = (r + f) % 2 === 0;
+          const squareName = worldToAlgebraic(f, r);
+          let tileColor = isLight ? 0xe2e8f0 : 0x334155;
+          if (biome === 'jungle') {
+            // Pasto blanco lunar vs Pasto rojo carmesí como pediste
+            tileColor = isLight ? 0xfafafa : 0xb91c1c;
+          }
+
+          const tileGeo = new THREE.BoxGeometry(1, 0.15, 1);
+          const tileMat = new THREE.MeshStandardMaterial({
+            color: tileColor,
+            roughness: biome === 'jungle' ? 0.85 : 0.2,
+            metalness: biome === 'jungle' ? 0.05 : 0.2
+          });
+          const tile = new THREE.Mesh(tileGeo, tileMat);
+          tile.position.set(f - 3.5, 0, r - 3.5);
+          tile.receiveShadow = true;
+          tile.userData = { square: squareName, isTile: true };
+          boardGroup.add(tile);
+
+          // Si es modo selva, agregamos briznas de pasto 3D animadas
+          if (biome === 'jungle') {
+            const bladeGeo = new THREE.ConeGeometry(0.06, 0.28, 4);
+            const bladeMat = new THREE.MeshStandardMaterial({ color: tileColor });
+            for (let i = 0; i < 4; i++) {
+              const blade = new THREE.Mesh(bladeGeo, bladeMat);
+              blade.position.set(
+                (f - 3.5) + (Math.random() - 0.5) * 0.7,
+                0.18,
+                (r - 3.5) + (Math.random() - 0.5) * 0.7
+              );
+              blade.userData = { phase: Math.random() * Math.PI * 2 };
+              boardGroup.add(blade);
+              grassBlades.push(blade);
             }
-            
-            function createParticles(containerId, count = 25) {
-                const container = document.getElementById(containerId);
-                if (!container) return;
-                container.innerHTML = ''; 
-                for (let i = 0; i < count; i++) {
-                    const p = document.createElement('div');
-                    p.className = 'particle';
-                    p.style.left = `${Math.random() * 100}%`;
-                    p.style.top = `${Math.random() * 100}%`;
-                    const size = Math.random() * 8 + 2;
-                    p.style.width = `${size}px`; p.style.height = `${size}px`;
-                    p.style.animationDelay = `${Math.random() * 10}s`;
-                    container.appendChild(p);
-                }
-            }
-            
-            function preloadAllAssets() {
-                navigateTo('initialLoading');
-                initializeLoadingScreenVisuals();
-                createParticles('particle-container');
-                const progressBar = document.getElementById('initial-loading-progress-bar');
-                const loadingText = document.getElementById('loading-text');
+          }
+        }
+      }
+    }
 
-                if (localStorage.getItem('assets_preloaded_v1')) {
-                    loadingText.textContent = "Verificando artefactos en el castillo...";
-                } else {
-                    loadingText.textContent = "Forjando nuevos artefactos mágicos...";
-                }
+    /**************************************************************
+     * 4. GENERADOR DE PIEZAS 3D (CLÁSICAS Y ESTILO MAGOS/HARRY POTTER)
+     * Nota: También preparado para cargar .GLB de tu repo Ecoajedres-AR
+     **************************************************************/
+    function createPieceMesh(type, color, style = 'classic') {
+      const group = new THREE.Group();
+      const mat = color === 'w' ? whiteMat : blackMat;
 
-                const tempScene = document.createElement('a-scene');
-                tempScene.style.cssText = 'position: absolute; height: 1px; width: 1px; left: -9999px; top: -9999px;';
-                const assetsEl = document.createElement('a-assets');
-                assetsEl.setAttribute('timeout', '60000');
+      // Base común de toda ficha
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.15, 20), mat);
+      base.position.y = 0.08;
+      base.castShadow = true;
+      group.add(base);
 
-                const allAssetUrls = new Set();
-                Object.values(assetMap).forEach(pieceSet => {
-                    Object.values(pieceSet.w).forEach(p => p.url && allAssetUrls.add(p.url));
-                    Object.values(pieceSet.b).forEach(p => p.url && allAssetUrls.add(p.url));
-                });
-                
-                if (allAssetUrls.size === 0) {
-                    loadingText.textContent = "¡Arsenal listo! No hay artefactos que forjar.";
-                    setTimeout(() => navigateTo('selection'), 1000); return;
-                }
+      if (style === 'wizard') {
+        // Modo Mágico (Personajes con túnica, sombrero/corona y arma mágica)
+        const robe = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.75, 12), mat);
+        robe.position.y = 0.45;
+        robe.castShadow = true;
+        group.add(robe);
 
-                let assetsContent = Array.from(allAssetUrls).map(url => `<a-asset-item id="preload-${url}" src="${url}"></a-asset-item>`).join('');
-                assetsEl.innerHTML = assetsContent;
-                tempScene.appendChild(assetsEl);
-                document.body.appendChild(tempScene);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), mat);
+        head.position.y = 0.9;
+        group.add(head);
 
-                assetsEl.addEventListener('progress', (event) => {
-                    const progress = event.detail.progress * 100;
-                    if (!isNaN(progress)) {
-                        progressBar.style.width = `${progress}%`;
-                        if (!localStorage.getItem('assets_preloaded_v1')) {
-                             loadingText.textContent = `Forjando nuevos artefactos mágicos... (${Math.round(progress)}%)`;
-                        }
-                    }
-                });
+        // Aura mágica flotante según rango de la pieza
+        const auraColor = color === 'w' ? 0x38bdf8 : 0xf43f5e;
+        const staffMat = new THREE.MeshStandardMaterial({ color: auraColor, emissive: auraColor, emissiveIntensity: 0.6 });
 
-                assetsEl.addEventListener('loaded', () => {
-                    loadingText.textContent = "¡Arsenal mágico listo!";
-                    localStorage.setItem('assets_preloaded_v1', 'true'); 
-                    setTimeout(() => {
-                        document.body.removeChild(tempScene);
-                        navigateTo('selection');
-                    }, 500);
-                });
+        if (type === 'k' || type === 'q') {
+          const crown = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.35, 6), staffMat);
+          crown.position.y = 1.15;
+          group.add(crown);
+        } else if (type === 'b') {
+          // Sombrero de hechicero
+          const hat = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.45, 12), staffMat);
+          hat.position.y = 1.15;
+          group.add(hat);
+        } else if (type === 'n') {
+          // Lanza de caballero mágico
+          const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1), staffMat);
+          lance.position.set(0.25, 0.65, 0);
+          group.add(lance);
+        } else if (type === 'r') {
+          // Escudo Golem
+          const shield = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.12), staffMat);
+          shield.position.set(0, 0.55, 0.25);
+          group.add(shield);
+        } else {
+          // Espada de guardián para peones
+          const sword = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.55, 0.08), staffMat);
+          sword.position.set(0.22, 0.55, 0.15);
+          group.add(sword);
+        }
+      } else {
+        // Modo Clásico Staunton 3D
+        const bodyH = { p: 0.45, r: 0.6, n: 0.65, b: 0.75, q: 0.9, k: 1.05 }[type];
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, bodyH, 20), mat);
+        body.position.y = 0.15 + bodyH / 2;
+        body.castShadow = true;
+        group.add(body);
 
-                assetsEl.addEventListener('timeout', () => {
-                    loadingText.textContent = "Error: La forja mágica falló. Revisa tu conexión.";
-                });
-            }
+        if (type === 'p') {
+          const top = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), mat);
+          top.position.y = 0.15 + bodyH + 0.12;
+          group.add(top);
+        } else if (type === 'r') {
+          const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.22, 8), mat);
+          tower.position.y = 0.15 + bodyH + 0.1;
+          group.add(tower);
+        } else if (type === 'n') {
+          const snout = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, 0.42), mat);
+          snout.position.set(0, 0.15 + bodyH + 0.1, 0.08);
+          group.add(snout);
+        } else if (type === 'b') {
+          const mitre = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.38, 16), mat);
+          mitre.position.y = 0.15 + bodyH + 0.18;
+          group.add(mitre);
+        } else if (type === 'q') {
+          const orb = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), mat);
+          orb.position.y = 0.15 + bodyH + 0.15;
+          group.add(orb);
+        } else if (type === 'k') {
+          const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.08), mat);
+          const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.08), mat);
+          crossV.position.y = 0.15 + bodyH + 0.22;
+          crossH.position.y = 0.15 + bodyH + 0.22;
+          group.add(crossV, crossH);
+        }
+      }
 
-            buttons.start.addEventListener('click', () => { preloadAllAssets(); });
-            document.querySelectorAll('.selection-card').forEach(card => card.addEventListener('click', e => {
-                document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                selectedSet = e.currentTarget.dataset.set;
-                buttons.continueSet.disabled = false;
-            }));
-            buttons.continueSet.addEventListener('click', () => navigateTo('boardSelection'));
-            document.querySelectorAll('.board-card').forEach(card => card.addEventListener('click', e => {
-                document.querySelectorAll('.board-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                selectedBoard = e.currentTarget.dataset.board;
-                if (playerColor) buttons.continueBoard.disabled = false;
-            }));
-            document.querySelectorAll('.color-swatch').forEach(swatch => swatch.addEventListener('click', e => {
-                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                playerColor = e.currentTarget.dataset.color;
-                if (selectedBoard) buttons.continueBoard.disabled = false;
-            }));
-            buttons.continueBoard.addEventListener('click', () => navigateTo('gameMode'));
-            document.querySelectorAll('.mode-card').forEach(card => card.addEventListener('click', e => {
-                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-                e.currentTarget.classList.add('selected');
-                gameMode = e.currentTarget.dataset.mode;
-                buttons.startGame.disabled = false;
-            }));
-            buttons.startGame.addEventListener('click', () => navigateTo('instructions'));
-            buttons.backToSet.addEventListener('click', () => navigateTo('selection'));
-            buttons.backToBoardSelect.addEventListener('click', () => navigateTo('boardSelection'));
-            buttons.backToModeSelect.addEventListener('click', () => navigateTo('gameMode'));
-            buttons.exitAR.addEventListener('click', () => {
-                clearInterval(loadingPhrasesInterval);
-                if (sceneEl && sceneEl.is('ar-mode')) {
-                    sceneEl.exitVR();
-                }
-                navigateTo('gameMode');
-            });
-            
-            buttons.startAR.addEventListener('click', () => { setupARScene(); });
+      return group;
+    }
 
-            function setupARScene() {
-                navigateTo('arEntryLoading');
-                createParticles('particle-container-ar');
-                
-                const arLoadingText = document.getElementById('ar-loading-status-text');
-                const phrases = [ "Alineando el plano astral...", "Invocando poder arcano...", "Estabilizando la conexión...", "Enfocando la lente mágica...", "Casi listo para el duelo..." ];
-                let phraseIndex = 0;
-                arLoadingText.textContent = phrases[phraseIndex];
-                loadingPhrasesInterval = setInterval(() => {
-                    phraseIndex = (phraseIndex + 1) % phrases.length;
-                    arLoadingText.textContent = phrases[phraseIndex];
-                }, 2500);
+    function renderPieces() {
+      while (piecesGroup.children.length > 0) piecesGroup.remove(piecesGroup.children[0]);
+      const style = document.getElementById('piece-style').value;
+      const board = game.board();
 
-                const assetsEl = document.getElementById('ar-assets');
-                assetsEl.innerHTML = ''; // Limpiar assets previos
-                const assetUrls = new Set();
-                if (assetMap[selectedSet]) {
-                    Object.values(assetMap[selectedSet].w).forEach(p => p.url && assetUrls.add(p.url));
-                    Object.values(assetMap[selectedSet].b).forEach(p => p.url && assetUrls.add(p.url));
-                }
-                
-                let assetsContent = Array.from(assetUrls).map(url => `<a-asset-item id="${url}" src="${url}"></a-asset-item>`).join('');
-                assetsEl.innerHTML = assetsContent;
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const piece = board[r][f];
+          if (piece) {
+            const square = worldToAlgebraic(f, r);
+            const pos = algebraicToWorld(square);
+            const mesh = createPieceMesh(piece.type, piece.color, style);
+            mesh.position.set(pos.x, 0.08, pos.z);
+            mesh.userData = { square, piece };
+            piecesGroup.add(mesh);
+          }
+        }
+      }
+      updateHUDStatus();
+    }
 
-                
-                if (sceneEl.hasLoaded) {
-                    clearInterval(loadingPhrasesInterval);
-                    navigateTo('ar');
-                    sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
-                    sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
-                } else {
-                     sceneEl.addEventListener('loaded', () => {
-                        clearInterval(loadingPhrasesInterval);
-                        navigateTo('ar');
-                        sceneEl.setAttribute('vr-mode-ui', 'enabled', true);
-                        sceneEl.setAttribute('vr-mode-ui', 'enterARButtonText', 'INVOCAR TABLERO');
-                    }, { once: true });
-                }
-            }
-            
-            AFRAME.registerComponent('ar-logic', {
-                 init: function() {
-                    this.reticle = document.querySelector('#reticle');
-                    this.boardContainer = document.querySelector('#board-container');
-                    this.hitTestSource = null;
-                    
-                    this.touchState = {
-                        dragging: false, pinching: false, startDist: 0, startAngle: 0,
-                        initialScale: new THREE.Vector3(), initialRotation: new THREE.Euler(),
-                        lastTouch: { x: 0, y: 0 }
-                    };
+    /**************************************************************
+     * 5. INTERACCIÓN TÁCTIL / DEDO (RAYCASTER) + TECLADO + IA
+     **************************************************************/
+    let selectedSquare = null;
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
 
-                    this.onEnterVR = this.onEnterVR.bind(this);
-                    this.onExitVR = this.onExitVR.bind(this);
-                    this.onSelect = this.onSelect.bind(this);
-                    this.onTouchStart = this.onTouchStart.bind(this);
-                    this.onTouchMove = this.onTouchMove.bind(this);
-                    this.onTouchEnd = this.onTouchEnd.bind(this);
-                    
-                    this.el.sceneEl.addEventListener('enter-vr', this.onEnterVR);
-                    this.el.sceneEl.addEventListener('exit-vr', this.onExitVR);
-                    this.el.sceneEl.addEventListener('click', this.handleGameClick.bind(this));
-                },
-                tick: function() {
-                    if (!this.el.sceneEl.is('ar-mode') || !this.hitTestSource || boardPlaced) return;
-                    const frame = this.el.sceneEl.renderer.xr.getFrame();
-                    if (!frame) return;
-                    const hitTestResults = frame.getHitTestResults(this.hitTestSource);
-                    if (hitTestResults.length > 0) {
-                        const hit = hitTestResults[0];
-                        const referenceSpace = this.el.sceneEl.renderer.xr.getReferenceSpace();
-                        const pose = hit.getPose(referenceSpace);
-                        this.reticle.setAttribute('visible', 'true');
-                        this.reticle.object3D.position.copy(pose.transform.position);
-                        this.reticle.object3D.quaternion.copy(pose.transform.quaternion);
-                    } else {
-                        this.reticle.setAttribute('visible', 'false');
-                    }
-                },
-                onEnterVR: async function() {
-                    if (this.el.sceneEl.is('ar-mode')) {
-                        const canvas = this.el.sceneEl.canvas;
-                        canvas.addEventListener('touchstart', this.onTouchStart);
-                        canvas.addEventListener('touchmove', this.onTouchMove);
-                        canvas.addEventListener('touchend', this.onTouchEnd);
-                        
-                        document.getElementById('ar-instructions-ui').classList.remove('hidden');
-                        buttons.exitAR.style.display = 'block';
-                        boardPlaced = false; game.reset();
-                        this.boardContainer.setAttribute('visible', 'false');
-                        this.boardContainer.innerHTML = '';
-                        try {
-                            const session = this.el.sceneEl.renderer.xr.getSession();
-                            session.addEventListener('select', this.onSelect); 
-                            const viewerReferenceSpace = await session.requestReferenceSpace('viewer');
-                            this.hitTestSource = await session.requestHitTestSource({ space: viewerReferenceSpace });
-                        } catch (e) { this.hitTestSource = null; }
-                    }
-                },
-                onExitVR: function() {
-                    const canvas = this.el.sceneEl.canvas;
-                    canvas.removeEventListener('touchstart', this.onTouchStart);
-                    canvas.removeEventListener('touchmove', this.onTouchMove);
-                    canvas.removeEventListener('touchend', this.onTouchEnd);
+    function clearHighlights() {
+      while (highlightsGroup.children.length > 0) highlightsGroup.remove(highlightsGroup.children[0]);
+    }
 
-                    if (this.hitTestSource) this.hitTestSource = null;
-                    const session = this.el.sceneEl.renderer.xr.getSession();
-                    if(session) session.removeEventListener('select', this.onSelect);
-                    navigateTo('gameMode');
-                },
-                onSelect: function() {
-                    if (!boardPlaced && this.reticle.getAttribute('visible')) {
-                        this.boardContainer.setAttribute('position', this.reticle.object3D.position);
-                        this.boardContainer.setAttribute('visible', 'true');
-                        this.reticle.setAttribute('visible', 'false');
-                        boardPlaced = true;
-                        document.getElementById('ar-instructions-ui').classList.add('hidden');
-                        document.getElementById('game-status').style.display = 'block';
-                        create3DBoard(this.boardContainer);
-                        renderBoardFromFen(this.boardContainer);
-                        updateGameStatus();
-                        this.hitTestSource = null; 
-                    }
-                },
-                handleGameClick: function(evt) { if (boardPlaced && !this.touchState.dragging && !this.touchState.pinching) handleGameClick(evt); },
-                
-                onTouchStart: function(e) {
-                    if (!boardPlaced || e.touches.length > 2) return;
-                    e.preventDefault();
-
-                    if (e.touches.length === 1) {
-                        this.touchState.dragging = true;
-                        this.touchState.lastTouch.x = e.touches[0].clientX;
-                        this.touchState.lastTouch.y = e.touches[0].clientY;
-                    } else if (e.touches.length === 2) {
-                        this.touchState.dragging = false; this.touchState.pinching = true;
-                        this.touchState.initialScale.copy(this.boardContainer.object3D.scale);
-                        this.touchState.initialRotation.copy(this.boardContainer.object3D.rotation);
-                        const dx = e.touches[0].clientX - e.touches[1].clientX;
-                        const dy = e.touches[0].clientY - e.touches[1].clientY;
-                        this.touchState.startDist = Math.sqrt(dx * dx + dy * dy);
-                        this.touchState.startAngle = Math.atan2(dy, dx);
-                    }
-                },
-                onTouchMove: function(e) {
-                    if (!boardPlaced) return;
-                    e.preventDefault();
-
-                    if (this.touchState.dragging && e.touches.length === 1) {
-                        const deltaX = e.touches[0].clientX - this.touchState.lastTouch.x;
-                        const deltaY = e.touches[0].clientY - this.touchState.lastTouch.y;
-                        const boardPos = this.boardContainer.object3D.position;
-                        const camera = this.el.sceneEl.camera;
-                        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                        boardPos.add(right.multiplyScalar(deltaX * 0.001));
-                        boardPos.add(forward.multiplyScalar(deltaY * 0.001));
-
-                        this.touchState.lastTouch.x = e.touches[0].clientX;
-                        this.touchState.lastTouch.y = e.touches[0].clientY;
-                    } else if (this.touchState.pinching && e.touches.length === 2) {
-                        const dx = e.touches[0].clientX - e.touches[1].clientX;
-                        const dy = e.touches[0].clientY - e.touches[1].clientY;
-                        const currentDist = Math.sqrt(dx * dx + dy * dy);
-                        const scaleFactor = currentDist / this.touchState.startDist;
-                        this.boardContainer.object3D.scale.copy(this.touchState.initialScale).multiplyScalar(scaleFactor);
-
-                        const currentAngle = Math.atan2(dy, dx);
-                        const angleDelta = currentAngle - this.touchState.startAngle;
-                        this.boardContainer.object3D.rotation.y = this.touchState.initialRotation.y + angleDelta;
-                    }
-                },
-                onTouchEnd: function(e) {
-                    if (e.touches.length < 2) this.touchState.pinching = false;
-                    if (e.touches.length < 1) this.touchState.dragging = false;
-                }
-            });
-
-            // --- Lógica de juego y UI ---
-            function initializeLoadingScreenVisuals() {
-                const pieceLoader = document.getElementById('piece-loader');
-                pieceLoader.innerHTML = '';
-                const pieces = [
-                    `<svg data-piece="king" viewBox="0 0 45 45"><path d="M22.5 11.63V6M20 8h5M22.5 25s4.5-7.5 3-10.5c0 0-1.5-3-3-3s-3 3-3 3c-1.5 3 3 10.5 3 10.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path></svg>`,
-                    `<svg data-piece="queen" viewBox="0 0 45 45"><path d="M9 13.5s1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5 3.5 4.5 3.5 4.5 1 4.5 3.5 4.5 3.5-4.5 3.5-4.5 1-4.5 3.5-4.5" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" fill="none" stroke="#FFF"></path><path d="M12.5 37h20v-2.5h-20V37zM12.5 32.5h20v-2.5h-20v2.5zM12.5 27.5h20v-2.5h-20v2.5z" stroke="#FFF" stroke-width="1.5" fill="#FFF"></path><circle cx="6" cy="12" r="1.2" fill="#FFF"></circle><circle cx="12.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="19.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="26.5" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="33" cy="9.5" r="1.2" fill="#FFF"></circle><circle cx="39" cy="12" r="1.2" fill="#FFF"></circle></svg>`,
-                ];
-                pieceLoader.innerHTML = pieces.join('');
-                let currentPiece = 0;
-                const pieceElements = pieceLoader.querySelectorAll('svg');
-                pieceElements[currentPiece].classList.add('active');
-                setInterval(() => {
-                    pieceElements[currentPiece].classList.remove('active');
-                    currentPiece = (currentPiece + 1) % pieceElements.length;
-                    pieceElements[currentPiece].classList.add('active');
-                }, 2000);
-            }
-            function create3DBoard(parent) {
-                const boardSize = 0.6; const squareSize = boardSize / 8;
-                const boardGroup = document.createElement('a-entity');
-                boardGroup.setAttribute('id', 'board-group');
-                const boardBase = document.createElement('a-box');
-                boardBase.setAttribute('width', boardSize + 0.04); boardBase.setAttribute('height', 0.02);
-                boardBase.setAttribute('depth', boardSize + 0.04); boardBase.setAttribute('color', '#4a2a15');
-                boardBase.setAttribute('position', '0 -0.01 0');
-                boardGroup.appendChild(boardBase);
-                for(let i = 0; i < 8; i++) {
-                    for(let j = 0; j < 8; j++) {
-                        const squareEl = document.createElement('a-plane');
-                        squareEl.setAttribute('width', squareSize); squareEl.setAttribute('height', squareSize);
-                        squareEl.setAttribute('color', (i + j) % 2 === 0 ? '#D18B47' : '#FFCE9E');
-                        const x = -boardSize/2 + squareSize/2 + j * squareSize;
-                        const z = -boardSize/2 + squareSize/2 + i * squareSize;
-                        squareEl.setAttribute('position', `${x} 0.001 ${z}`);
-                        squareEl.setAttribute('rotation', '-90 0 0');
-                        squareEl.dataset.square = 'abcdefgh'[j] + (8 - i);
-                        squareEl.classList.add('clickable-square');
-                        boardGroup.appendChild(squareEl);
-                    }
-                }
-                parent.appendChild(boardGroup);
-            }
-            function renderBoardFromFen(parent) {
-                const boardGroup = parent.querySelector('#board-group') || parent;
-                boardGroup.querySelectorAll('.chess-piece').forEach(el => el.remove());
-                const boardSize = 0.6; const squareSize = boardSize / 8;
-                const offset = -boardSize/2 + squareSize/2;
-                game.board().forEach((row, i) => {
-                    row.forEach((piece, j) => {
-                        if (!piece) return;
-                        const pieceEl = document.createElement('a-entity');
-                        pieceEl.classList.add('chess-piece');
-                        pieceEl.dataset.square = piece.square;
-                        if (assetMap[selectedSet]?.[piece.color]?.[piece.type]?.url) {
-                            const modelData = assetMap[selectedSet][piece.color][piece.type];
-                            pieceEl.setAttribute('gltf-model', `#${modelData.url}`);
-                            pieceEl.setAttribute('scale', modelData.scale);
-                            if(modelData.rotation) pieceEl.setAttribute('rotation', modelData.rotation);
-                        }
-                        const x = offset + j * squareSize;
-                        const z = offset + (7-i) * squareSize;
-                        pieceEl.setAttribute('position', `${x} 0.01 ${z}`);
-                        boardGroup.appendChild(pieceEl);
-                    });
-                });
-            }
-            function handleGameClick(evt) {
-                if ((gameMode === 'pva' && game.turn() !== playerColor) || game.game_over()) return;
-                const clickedEl = evt.target.closest('.chess-piece, .clickable-square, .legal-move-marker');
-                if (!clickedEl) { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; return; }
-                if (gameState === 'IDLE') {
-                    if (clickedEl.classList.contains('chess-piece')) {
-                        const square = clickedEl.dataset.square;
-                        const piece = game.get(square);
-                        if (piece && piece.color === game.turn()) selectPiece(clickedEl);
-                    }
-                } else if (gameState === 'PIECE_SELECTED') {
-                    const toSquare = clickedEl.dataset.square;
-                    if (toSquare) {
-                        const fromSquare = selectedPieceEntity.dataset.square;
-                        const move = game.move({ from: fromSquare, to: toSquare, promotion: 'q' });
-                        if (move) movePiece();
-                        else {
-                            const pieceOnTarget = game.get(toSquare);
-                            const targetEntity = document.querySelector(`.chess-piece[data-square="${toSquare}"]`);
-                            if (pieceOnTarget && targetEntity && pieceOnTarget.color === game.turn()) selectPiece(targetEntity);
-                            else { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; }
-                        }
-                    } else { clearLegalMoves(); gameState = 'IDLE'; selectedPieceEntity = null; }
-                }
-            }
-            function selectPiece(entity) {
-                clearLegalMoves();
-                selectedPieceEntity = entity;
-                gameState = 'PIECE_SELECTED';
-                const moves = game.moves({ square: entity.dataset.square, verbose: true });
-                moves.forEach(move => {
-                    const pos = squareToPosition(move.to);
-                    const marker = document.createElement('a-cylinder');
-                    marker.setAttribute('radius', '0.03'); marker.setAttribute('height', '0.005');
-                    marker.setAttribute('material', 'color: #10B981; opacity: 0.6');
-                    marker.setAttribute('position', `${pos.x} 0.002 ${pos.z}`);
-                    marker.dataset.square = move.to;
-                    marker.classList.add('legal-move-marker', 'clickable-square');
-                    document.querySelector('#board-group').appendChild(marker);
-                    legalMoveEntities.push(marker);
-                });
-            }
-            function clearLegalMoves() {
-                legalMoveEntities.forEach(e => e.parentNode && e.parentNode.removeChild(e));
-                legalMoveEntities = [];
-            }
-            function movePiece() {
-                clearLegalMoves(); 
-                gameState = 'IDLE';
-                selectedPieceEntity = null;
-                renderBoardFromFen(document.querySelector('#board-container'));
-                updateGameStatus();
-                if (!game.game_over() && gameMode === 'pva' && game.turn() !== playerColor) {
-                    setTimeout(makeAIMove, 500);
-                }
-            }
-            function makeAIMove() {
-                const moves = game.moves();
-                if (moves.length > 0) {
-                    game.move(moves[Math.floor(Math.random() * moves.length)]);
-                    movePiece();
-                }
-            }
-            function updateGameStatus() {
-                let status = '';
-                const moveColor = game.turn() === 'w' ? 'Blancas' : 'Negras';
-                if (game.in_checkmate()) status = `¡Jaque Mate! Ganan las ${moveColor === 'Blancas' ? 'Negras' : 'Blancas'}`; 
-                else if (game.in_draw()) status = 'Empate';
-                else { status = `Turno de las ${moveColor}`; if (game.in_check()) status += ' - ¡Jaque!'; }
-                document.getElementById('game-status').textContent = status;
-            }
-            function squareToPosition(square) {
-                const boardSize = 0.6; const squareSize = boardSize / 8;
-                const offset = -boardSize/2 + squareSize/2;
-                const col = 'abcdefgh'.indexOf(square[0]);
-                const row = 8 - parseInt(square[1], 10);
-                return { x: offset + col * squareSize, z: offset + row * squareSize, y: 0.005 };
-            }
+    function showLegalMoves(square) {
+      clearHighlights();
+      const moves = game.moves({ square, verbose: true });
+      moves.forEach(m => {
+        const pos = algebraicToWorld(m.to);
+        const ringGeo = new THREE.RingGeometry(0.25, 0.42, 24);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: m.captured ? 0xef4444 : 0x10b981,
+          side: THREE.DoubleSide
         });
-    </script>
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.set(pos.x, 0.09, pos.z);
+        highlightsGroup.add(ring);
+      });
+    }
+
+    function tryMove(from, to) {
+      const move = game.move({ from, to, promotion: 'q' });
+      if (move) {
+        selectedSquare = null;
+        clearHighlights();
+        renderPieces();
+
+        // Si está en modo contra la Computadora (IA) y es turno de negras
+        if (!game.game_over() && document.getElementById('game-mode').value === 'ai' && game.turn() === 'b') {
+          setTimeout(makeAIMove, 450);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    // IA con Evaluación Posicional y Niveles (Principiante a Gran Maestro)
+    function makeAIMove() {
+      const rankLevel = parseInt(document.getElementById('ai-rank').value, 10);
+      const legalMoves = game.moves({ verbose: true });
+      if (legalMoves.length === 0) return;
+
+      const pieceValues = { p: 10, n: 30, b: 32, r: 50, q: 90, k: 900 };
+      let chosenMove = legalMoves[0];
+
+      if (rankLevel === 1) {
+        // Principiante: Movimiento semialeatorio
+        chosenMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+      } else {
+        // Niveles Superiores: Búsqueda Minimax / Heurística de captura y control central
+        let bestScore = -99999;
+        legalMoves.forEach(m => {
+          game.move(m);
+          let score = 0;
+          if (m.captured) score += pieceValues[m.captured] * 10;
+          if (['d4', 'd5', 'e4', 'e5'].includes(m.to)) score += 15;
+          if (game.in_check()) score += 25;
+
+          // Mirar respuesta del oponente según nivel FIDE
+          if (rankLevel >= 3) {
+            const oppMoves = game.moves({ verbose: true });
+            let maxOppCapture = 0;
+            oppMoves.forEach(om => {
+              if (om.captured) maxOppCapture = Math.max(maxOppCapture, pieceValues[om.captured] * 10);
+            });
+            score -= maxOppCapture;
+          }
+          // Ruido controlado según ELO
+          score += (Math.random() - 0.5) * (25 / rankLevel);
+          game.undo();
+
+          if (score > bestScore) {
+            bestScore = score;
+            chosenMove = m;
+          }
+        });
+      }
+
+      game.move(chosenMove);
+      renderPieces();
+    }
+
+    // Selección con el dedo o ratón en la cámara 3D/AR
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName !== 'CANVAS') return;
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      // Verificar clic en piezas o casillas
+      const intersects = raycaster.intersectObjects([...piecesGroup.children, ...boardGroup.children], true);
+      if (intersects.length > 0) {
+        let obj = intersects[0].object;
+        while (obj.parent && !obj.userData.square) obj = obj.parent;
+        const clickedSquare = obj.userData.square;
+        if (!clickedSquare) return;
+
+        if (selectedSquare) {
+          if (!tryMove(selectedSquare, clickedSquare)) {
+            // Si tocó otra pieza propia, cambiar selección
+            const p = game.get(clickedSquare);
+            if (p && p.color === game.turn()) {
+              selectedSquare = clickedSquare;
+              showLegalMoves(clickedSquare);
+            } else {
+              selectedSquare = null;
+              clearHighlights();
+            }
+          }
+        } else {
+          const p = game.get(clickedSquare);
+          if (p && p.color === game.turn()) {
+            selectedSquare = clickedSquare;
+            showLegalMoves(clickedSquare);
+          }
+        }
+      }
+    });
+
+    // Movimiento por teclado (ej: "e2e4" o "Nf3")
+    function handleKeyboardInput() {
+      const input = document.getElementById('keyboard-move');
+      const val = input.value.trim();
+      if (!val) return;
+
+      let moved = false;
+      if (val.length === 4) {
+        moved = tryMove(val.slice(0, 2).toLowerCase(), val.slice(2, 4).toLowerCase());
+      }
+      if (!moved) {
+        // Intentar notación algebraica estándar (ej. Nf3, e4)
+        const m = game.move(val);
+        if (m) {
+          renderPieces();
+          if (!game.game_over() && document.getElementById('game-mode').value === 'ai' && game.turn() === 'b') {
+            setTimeout(makeAIMove, 450);
+          }
+          moved = true;
+        }
+      }
+      if (moved) input.value = '';
+    }
+
+    document.getElementById('btn-move-key').addEventListener('click', handleKeyboardInput);
+    document.getElementById('keyboard-move').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleKeyboardInput();
+    });
+
+    /**************************************************************
+     * 6. CONTROLES DE INTERFAZ Y CÁMARA AR
+     **************************************************************/
+    function updateHUDStatus() {
+      const t = I18N[currentLang];
+      let text = game.turn() === 'w' ? t.turnW : t.turnB;
+      if (game.in_checkmate()) text = t.checkmate;
+      else if (game.in_draw()) text = t.draw;
+      else if (game.in_check()) text += t.check;
+      document.getElementById('ui-status').textContent = text;
+    }
+
+    document.getElementById('lang-select').addEventListener('change', (e) => {
+      currentLang = e.target.value;
+      const t = I18N[currentLang];
+      document.getElementById('ui-title').textContent = t.title;
+      document.getElementById('lbl-mode').textContent = t.mode;
+      document.getElementById('lbl-rank').textContent = t.rank;
+      document.getElementById('lbl-biome').textContent = t.biome;
+      document.getElementById('lbl-style').textContent = t.style;
+      document.getElementById('lbl-colors').textContent = t.colors;
+      document.getElementById('btn-reset').textContent = t.reset;
+      document.getElementById('btn-toggle-ar').textContent = t.arBtn;
+      document.getElementById('keyboard-move').placeholder = t.keyPlaceholder;
+      document.getElementById('btn-move-key').textContent = t.moveBtn;
+      updateHUDStatus();
+    });
+
+    document.getElementById('board-biome').addEventListener('change', (e) => buildBoard(e.target.value));
+    document.getElementById('piece-style').addEventListener('change', () => renderPieces());
+    document.getElementById('color-white').addEventListener('input', (e) => whiteMat.color.set(e.target.value));
+    document.getElementById('color-black').addEventListener('input', (e) => blackMat.color.set(e.target.value));
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      game.reset();
+      selectedSquare = null;
+      clearHighlights();
+      renderPieces();
+    });
+
+    // Activar Cámara de Realidad Aumentada en Celular/PC
+    let arActive = false;
+    document.getElementById('btn-toggle-ar').addEventListener('click', async () => {
+      const video = document.getElementById('ar-video');
+      if (!arActive) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }, audio: false
+          });
+          video.srcObject = stream;
+          video.style.display = 'block';
+          document.body.style.background = 'transparent';
+          arActive = true;
+        } catch (err) {
+          alert('No se pudo acceder a la cámara AR. Verifica permisos HTTPS o navegador.');
+        }
+      } else {
+        if (video.srcObject) video.srcObject.getTracks().forEach(tr => tr.stop());
+        video.style.display = 'none';
+        document.body.style.background = '#090d16';
+        arActive = false;
+      }
+    });
+
+    // Bucle de Animación (incluye viento en el pasto si está en Bioma Selva)
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
+      grassBlades.forEach(b => {
+        b.rotation.z = Math.sin(elapsed * 2.5 + b.userData.phase) * 0.18;
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Inicializar
+    buildBoard('classic');
+    renderPieces();
+    animate();
+  </script>
 </body>
 </html>
-
-
 
 
 
